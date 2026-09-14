@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Jonathan Aquino Realtor · Las Americas Real Estate</title>
+<meta name="description" content="¿Vende, compra o invierte? · Selling, buying or investing?">
+<style>
+:root{
+  --bg:#000;--fg:#fff;--muted:rgba(255,255,255,.62);--faint:rgba(255,255,255,.12);
+  --line:rgba(255,255,255,.24);--ease:cubic-bezier(.22,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.app{position:relative;z-index:1;height:100%;height:100dvh;display:flex;flex-direction:column}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 22px 0}
+.brand{font-weight:600;letter-spacing:.26em;font-size:12px;text-transform:uppercase;line-height:1.3}
+.brand small{display:block;letter-spacing:.16em;font-weight:400;color:var(--muted);font-size:10px;margin-top:5px}
+.right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.lang{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.lang button{background:none;border:0;color:var(--muted);font:inherit;font-size:12px;padding:6px 12px;cursor:pointer;transition:background .25s,color .25s}
+.lang button[aria-pressed="true"]{background:var(--fg);color:#000}
+.preview{font-size:10px;letter-spacing:.08em;color:var(--muted);border:1px dashed var(--line);border-radius:999px;padding:3px 9px}
+.progress{height:2px;background:var(--faint);margin:16px 22px 0;border-radius:2px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--fg);transition:width .7s var(--ease)}
+main{flex:1;display:flex;overflow-y:auto;padding:12px 22px}
+.stage{width:100%;max-width:560px;margin:auto}
+.card{transition:opacity .34s var(--ease),transform .34s var(--ease)}
+.card.out{opacity:0;transform:translateY(var(--dy,-28px))}
+.card.pre{opacity:0;transform:translateY(var(--dy,28px));transition:none}
+.card.shake{animation:shake .38s var(--ease)}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+.step{font-size:11px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin-bottom:14px}
+h1{font-size:clamp(26px,6.2vw,40px);line-height:1.12;font-weight:600;letter-spacing:-.01em}
+h1 .alt{display:block;color:var(--muted);font-weight:500;margin-top:6px}
+.sub{color:var(--muted);margin-top:12px;font-size:15px;line-height:1.55}
+.options{display:grid;gap:10px;margin-top:26px}
+.opt{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--fg);font:inherit;font-size:16px;padding:16px 18px;border-radius:14px;cursor:pointer;transition:border-color .25s,transform .15s,color .2s .12s,background 0s .42s;animation:rise .5s var(--ease) both;animation-delay:calc(var(--i,0) * 55ms)}
+.opt:hover{border-color:rgba(255,255,255,.55)}
+.opt:active{transform:scale(.985)}
+.opt>*{position:relative;z-index:1}
+.opt .key{width:26px;height:26px;border:1px solid var(--line);border-radius:8px;display:grid;place-items:center;font-size:12px;color:var(--muted);flex:none;transition:border-color .2s .12s,color .2s .12s}
+.opt.sel{background:var(--fg);color:#000;border-color:var(--fg)}
+.opt.sel .key{border-color:rgba(0,0,0,.4);color:#000}
+.opt .check{margin-left:auto;width:22px;height:22px;flex:none}
+.opt .check path{stroke:#000;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24}
+.opt.sel .check path{animation:draw .45s .1s var(--ease) forwards}
+.rip{position:absolute;border-radius:50%;background:var(--fg);transform:scale(0);animation:fill .48s var(--ease) forwards;z-index:0;pointer-events:none}
+@keyframes fill{to{transform:scale(1)}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+.field{margin-top:22px;animation:rise .5s var(--ease) both;animation-delay:calc(var(--i,0) * 60ms)}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.field input,.field textarea{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--fg);font:inherit;font-size:20px;padding:8px 2px 10px;outline:none;border-radius:0;transition:border-color .25s}
+.field input:focus,.field textarea:focus{border-color:var(--fg)}
+.field textarea{resize:none;min-height:110px;font-size:17px;line-height:1.5}
+.field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,.3)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{border:1px solid var(--line);background:none;color:var(--fg);font:inherit;font-size:14px;padding:9px 15px;border-radius:999px;cursor:pointer;transition:background .25s var(--ease),color .25s,border-color .25s,transform .15s}
+.chip:active{transform:scale(.96)}
+.chip.sel{background:var(--fg);color:#000;border-color:var(--fg)}
+.otherbox{margin-top:6px}
+.err{font-size:13px;margin-top:14px;min-height:18px;opacity:0;transform:translateY(-4px);transition:opacity .25s,transform .25s}
+.err.show{opacity:1;transform:none}
+.err.show::before{content:"— "}
+.nav{display:flex;align-items:center;gap:14px;margin-top:28px;flex-wrap:wrap}
+.btn{background:var(--fg);color:#000;border:0;font:inherit;font-weight:600;font-size:16px;padding:14px 24px;border-radius:12px;cursor:pointer;transition:transform .15s,opacity .25s}
+.btn:active{transform:scale(.97)}
+.ghost{background:none;border:0;color:var(--muted);font:inherit;font-size:14px;cursor:pointer;padding:10px 4px}
+.ghost:hover{color:var(--fg)}
+.hint{color:var(--muted);font-size:12px}
+.review{margin-top:22px;border-top:1px solid var(--faint)}
+.row{display:flex;gap:14px;align-items:baseline;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--faint);animation:rise .45s var(--ease) both;animation-delay:calc(var(--i,0) * 35ms)}
+.row span{color:var(--muted);font-size:13px;flex:none;max-width:42%}
+.row b{font-weight:500;font-size:15px;text-align:right;word-break:break-word}
+.row button{background:none;border:0;color:var(--muted);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer;flex:none}
+.consent{color:var(--muted);font-size:12px;line-height:1.5;margin-top:18px}
+.done{text-align:center}
+.ring{width:120px;height:120px;margin:0 auto 26px;display:block}
+.ring circle{fill:none;stroke:var(--fg);stroke-width:2;stroke-dasharray:327;stroke-dashoffset:327;animation:draw 1s var(--ease) forwards;transform:rotate(-90deg);transform-origin:center}
+.ring path{fill:none;stroke:var(--fg);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:70;stroke-dashoffset:70;animation:draw .6s .75s var(--ease) forwards}
+footer{padding:10px 22px 16px;font-size:12px;line-height:1.6;color:var(--muted);text-align:center}
+footer b{color:var(--fg);font-weight:500}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="app">
+  <header>
+    <div class="brand">Las Americas Real Estate<small>Jonathan Aquino · Realtor</small></div>
+    <div class="right">
+      <div class="lang" role="group" aria-label="Language / Idioma">
+        <button type="button" data-lang="es">ES</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+      <span class="preview" id="preview"></span>
+    </div>
+  </header>
+  <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+  <main><div class="stage"><div class="card" id="card"></div></div></main>
+  <footer id="foot"></footer>
+</div>
+<script>
+// Where answers get sent. Empty = preview mode: nothing leaves the page.
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbydtQQkmykZaKr3UVXt4b7EUedjzjKkEytx7wY6sCFKVKinwsMFHyj8roZzKj92pvtQ/exec';
+
+// His contact block (CT: licensee name + contact; brokerage name + contact at the same size).
+const AGENT = {name:'Jonathan Aquino, Realtor', phone:'(475) 419-4315', email:'jonathan@lasamericasreo.com'};
+const BROKER = {name:'Las Americas Real Estate', address:'2190 Madison Ave, Bridgeport, CT', phone:'(203) 368-2181'};
+
+const T = {
+  en:{
+    preview:'Preview — nothing is sent', cont:'Continue', back:'Back', send:'Send', enter:'or press Enter ↵', optional:'Optional',
+    q:'Question', of:'of',
+    welcomeSub:'A few quick questions and I’ll get back to you with straight answers.',
+    contactH:'How should I reach you?', name:'Name', email:'Email', phone:'Phone', prefer:'I prefer', call:'Call', text:'Text', emailOpt:'Email',
+    errName:'Add your name', errReach:'I need your phone or email', errEmail:'Check the email', errPhone:'Check the phone number',
+    errPrefEmail:'Add your email so I can reach you by email', errPrefPhone:'Add your phone so I can call or text you',
+    serviceH:'Which service are you interested in?', buy:'Buying a home', sell:'Selling a home', invest:'Commercial/residential investment', val:'Free home valuation', other:'Other', otherPh:'Tell me',
+    errOther:'Tell me a little more',
+    locBuyH:'Where are you looking?', locSellH:'Where is your property?', city:'City/Town', county:'County', countyOther:'Other county', errLoc:'Add a city or pick a county',
+    timeH:'What’s your timeline?', now:'Ready now', m13:'1–3 months', m36:'3–6 months', explore:'Just exploring',
+    budBuyH:'What’s your budget or price range?', budSellH:'What price range do you think your property is in?', notSure:'Not sure yet',
+    lenderH:'Are you pre-approved or working with a lender?', yes:'Yes', no:'No', referral:'Need a referral',
+    agentH:'Are you working with another agent?',
+    goalsH:'What are your goals?', goalsPh:'Tell me in your own words',
+    sourceH:'How did you hear about us?', fb:'Facebook', ig:'Instagram', yt:'YouTube', google:'Google', friend:'Friend or family',
+    reviewH:'All set. Look it over.', edit:'Edit', language:'Language', service:'Service', timeline:'Timeline', budget:'Budget / price', lender:'Lender', agent:'Other agent', goals:'Goals', source:'Heard from',
+    consent:'By sending, you agree Jonathan Aquino may contact you by call, text or email about your request.',
+    doneH:n=>`Thanks, ${n}.`, doneSub:'I’ll reach out soon.', doneNote:'(Preview — this was not sent.)', sendErr:'Something went wrong. Please try again, or message me directly.'
+  },
+  es:{
+    preview:'Vista previa — no se envía nada', cont:'Continuar', back:'Atrás', send:'Enviar', enter:'o presione Enter ↵', optional:'Opcional',
+    q:'Pregunta', of:'de',
+    welcomeSub:'Unas preguntas rápidas y le respondo directo.',
+    contactH:'¿Cómo le contacto?', name:'Nombre', email:'Email', phone:'Teléfono', prefer:'Prefiero', call:'Llamada', text:'Texto', emailOpt:'Email',
+    errName:'Escriba su nombre', errReach:'Necesito su teléfono o email', errEmail:'Revise el email', errPhone:'Revise el número de teléfono',
+    errPrefEmail:'Escriba su email para contactarle por email', errPrefPhone:'Escriba su teléfono para llamarle o enviarle texto',
+    serviceH:'¿En qué le puedo ayudar?', buy:'Comprar una casa', sell:'Vender una casa', invest:'Inversión comercial/residencial', val:'Análisis gratis del valor de su casa', other:'Otro', otherPh:'Cuénteme',
+    errOther:'Cuénteme un poco más',
+    locBuyH:'¿Dónde está buscando?', locSellH:'¿Dónde está su propiedad?', city:'Ciudad/pueblo', county:'Condado', countyOther:'Otro condado', errLoc:'Escriba una ciudad o elija un condado',
+    timeH:'¿Para cuándo?', now:'Listo ahora', m13:'1–3 meses', m36:'3–6 meses', explore:'Solo explorando',
+    budBuyH:'¿Cuál es su presupuesto o rango de precio?', budSellH:'¿En qué rango de precio cree que está su propiedad?', notSure:'Todavía no sé',
+    lenderH:'¿Ya está preaprobado o trabaja con un prestamista?', yes:'Sí', no:'No', referral:'Necesito una referencia',
+    agentH:'¿Está trabajando con otro agente?',
+    goalsH:'¿Cuáles son sus metas?', goalsPh:'Cuénteme en sus palabras',
+    sourceH:'¿Cómo supo de nosotros?', fb:'Facebook', ig:'Instagram', yt:'YouTube', google:'Google', friend:'Un amigo o familiar',
+    reviewH:'Listo. Revise antes de enviar.', edit:'Editar', language:'Idioma', service:'Servicio', timeline:'Para cuándo', budget:'Presupuesto / precio', lender:'Prestamista', agent:'Otro agente', goals:'Metas', source:'Supo por',
+    consent:'Al enviar, acepta que Jonathan Aquino le contacte por llamada, texto o email sobre su solicitud.',
+    doneH:n=>`Gracias, ${n}.`, doneSub:'Le escribo pronto.', doneNote:'(Vista previa — esto no se envió.)', sendErr:'Algo salió mal. Intente de nuevo o escríbame directamente.'
+  }
+};
+
+let lang = 'en';            // unknown language defaults to English; the first screen lets them choose
+const A = {};               // answers
+let cur = 'welcome';
+const $ = s => document.querySelector(s);
+const t = k => T[lang][k];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)').matches;
+const sellSide = () => A.service === 'sell' || A.service === 'val';
+
+/* ---------- background: drifting constellation that reacts to answers ---------- */
+const cv = $('#bg'), cx = cv.getContext('2d');
+let W, H, P = [], pulses = [], ring = false;
+function size(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight; cv.width = W*dpr; cv.height = H*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
+  const n = Math.round(Math.min(90, Math.max(34, W*H/15000)));
+  P = Array.from({length:n}, () => ({x:Math.random()*W, y:Math.random()*H, vx:(Math.random()-.5)*.24, vy:(Math.random()-.5)*.24, r:Math.random()*1.3+.5}));
+  if (reduce) draw();
+}
+function draw(){
+  cx.clearRect(0,0,W,H);
+  const R = Math.min(W,H)*.26, now = performance.now()/9000;
+  P.forEach((p,i) => {
+    if (ring && !reduce){
+      const a = i/P.length*Math.PI*2 + now, tx = W/2 + Math.cos(a)*R, ty = H/2 + Math.sin(a)*R;
+      p.x += (tx-p.x)*.05; p.y += (ty-p.y)*.05;
+    } else if (!reduce){
+      p.x += p.vx; p.y += p.vy; p.vx *= .992; p.vy *= .992;
+      if (Math.hypot(p.vx,p.vy) < .07){ p.vx += (Math.random()-.5)*.03; p.vy += (Math.random()-.5)*.03; }
+      if (p.x < -20) p.x = W+20; if (p.x > W+20) p.x = -20; if (p.y < -20) p.y = H+20; if (p.y > H+20) p.y = -20;
+    }
+  });
+  const L = 130;
+  for (let i=0;i<P.length;i++){ const a=P[i];
+    for (let j=i+1;j<P.length;j++){ const b=P[j], dx=a.x-b.x, dy=a.y-b.y, d=dx*dx+dy*dy;
+      if (d < L*L){ cx.strokeStyle = `rgba(255,255,255,${(1-Math.sqrt(d)/L)*.13})`; cx.lineWidth=.6; cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(b.x,b.y); cx.stroke(); }
+    }
+  }
+  cx.fillStyle = 'rgba(255,255,255,.55)';
+  P.forEach(p => { cx.beginPath(); cx.arc(p.x,p.y,p.r,0,7); cx.fill(); });
+  pulses = pulses.filter(q => q.t < 1);
+  pulses.forEach(q => { q.t += .02; cx.strokeStyle = `rgba(255,255,255,${(1-q.t)*.32})`; cx.lineWidth = 1.2; cx.beginPath(); cx.arc(q.x,q.y,q.t*q.max,0,7); cx.stroke(); });
+  if (!reduce) requestAnimationFrame(draw);
+}
+function pulse(el){
+  if (reduce) return;
+  const r = el ? el.getBoundingClientRect() : {left:W/2,top:H/2,width:0,height:0};
+  const x = r.left + r.width/2, y = r.top + r.height/2;
+  pulses.push({x, y, t:0, max:Math.max(W,H)*.85});
+  P.forEach(p => { const dx=p.x-x, dy=p.y-y, d=Math.hypot(dx,dy)||1, f=Math.max(0,1-d/420)*2.4; p.vx += dx/d*f; p.vy += dy/d*f; });
+}
+addEventListener('resize', size); size(); if (!reduce) requestAnimationFrame(draw);
+
+/* ---------- building blocks ---------- */
+const CHECK = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
+const opts = (list, selected) => `<div class="options" role="list">${list.map((o,i) =>
+  `<button type="button" class="opt${selected===o.v?' sel':''}" data-v="${o.v}" style="--i:${i}"><span class="key">${i+1}</span><span>${esc(o.l)}</span>${CHECK}</button>`).join('')}</div>`;
+const chips = (name, list, selected) => `<div class="chips" data-chips="${name}">${list.map(o =>
+  `<button type="button" class="chip${selected===o.v?' sel':''}" data-v="${o.v}">${esc(o.l)}</button>`).join('')}</div>`;
+const field = (id, label, val, type='text', i=0, extra='') =>
+  `<div class="field" style="--i:${i}"><label for="${id}">${esc(label)}</label><input id="${id}" type="${type}" value="${esc(val)}" ${extra}></div>`;
+const nav = (next=true, backable=true, label) => `<p class="err" id="err" role="alert"></p><div class="nav">${next?`<button type="button" class="btn" data-act="next">${esc(label||t('cont'))}</button>`:''}${!coarse&&next?`<span class="hint">${esc(t('enter'))}</span>`:''}${backable?`<button type="button" class="ghost" data-act="back">← ${esc(t('back'))}</button>`:''}</div>`;
+const head = (h, sub) => { const s = stepInfo(); return `${s?`<p class="step">${esc(t('q'))} ${s.n} ${esc(t('of'))} ${s.total}</p>`:''}<h1>${esc(h)}</h1>${sub?`<p class="sub">${esc(sub)}</p>`:''}`; };
+
+/* ---------- the steps, in the order of his "form format" doc ---------- */
+const STEPS = [
+  {id:'welcome', paint:() => `<h1>¿Vende, compra o invierte?<span class="alt">Selling, buying or investing?</span></h1>
+      <p class="sub">${esc(T.es.welcomeSub)}<br>${esc(T.en.welcomeSub)}</p>
+      ${opts([{v:'es',l:'Español'},{v:'en',l:'English'}], A.language==='Español'?'es':A.language==='English'?'en':'')}`,
+    pick:v => { setLang(v); }},
+
+  {id:'contact', q:true, paint:() => `${head(t('contactH'))}
+      ${field('f-name', t('name'), A.name, 'text', 0, 'autocomplete="name"')}
+      ${field('f-phone', t('phone'), A.phone, 'tel', 1, 'autocomplete="tel" inputmode="tel"')}
+      ${field('f-email', t('email'), A.email, 'email', 2, 'autocomplete="email" inputmode="email"')}
+      <div class="field" style="--i:3"><label>${esc(t('prefer'))}</label>${chips('prefer', [{v:'call',l:t('call')},{v:'text',l:t('text')},{v:'email',l:t('emailOpt')}], A.prefer)}</div>
+      ${nav()}`,
+    keep:() => { A.name = $('#f-name').value.trim(); A.phone = $('#f-phone').value.trim(); A.email = $('#f-email').value.trim(); },
+    validate:() => {
+      if (!A.name) return 'errName';
+      if (!A.email && !A.phone) return 'errReach';
+      if (A.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(A.email)) return 'errEmail';
+      const d = A.phone.replace(/\D/g,''); if (A.phone && !(d.length===10 || (d.length===11 && d[0]==='1'))) return 'errPhone';
+      if (A.prefer==='email' && !A.email) return 'errPrefEmail';
+      if ((A.prefer==='call' || A.prefer==='text') && !A.phone) return 'errPrefPhone';
+      return '';
+    }},
+
+  {id:'service', q:true, paint:() => `${head(t('serviceH'))}
+      ${opts([{v:'buy',l:t('buy')},{v:'sell',l:t('sell')},{v:'invest',l:t('invest')},{v:'val',l:t('val')},{v:'other',l:t('other')}], A.service)}
+      <div class="otherbox" id="otherbox" ${A.service==='other'?'':'hidden'}>${field('f-other', t('otherPh'), A.serviceOther)}</div>
+      ${nav(A.service==='other')}`,
+    pick:(v, btn) => { A.service = v; const ob = $('#otherbox'); if (v === 'other'){ reveal('#otherbox', '#f-other'); showNext(); return false; } if (ob) ob.hidden = true; },
+    keep:() => { const o = $('#f-other'); if (o) A.serviceOther = o.value.trim(); },
+    validate:() => A.service==='other' && !A.serviceOther ? 'errOther' : ''},
+
+  {id:'location', q:true, paint:() => `${head(sellSide() ? t('locSellH') : t('locBuyH'))}
+      ${field('f-city', t('city'), A.city, 'text', 0, 'autocomplete="address-level2"')}
+      <div class="field" style="--i:1"><label>${esc(t('county'))}</label>${chips('county', [{v:'Fairfield',l:'Fairfield'},{v:'New Haven',l:'New Haven'},{v:'Hartford',l:'Hartford'},{v:'other',l:t('other')}], A.county)}</div>
+      <div class="otherbox" id="countybox" ${A.county==='other'?'':'hidden'}>${field('f-county', t('countyOther'), A.countyOther)}</div>
+      ${nav()}`,
+    keep:() => { A.city = $('#f-city').value.trim(); const c = $('#f-county'); if (c) A.countyOther = c.value.trim(); },
+    validate:() => (!A.city && !A.county) ? 'errLoc' : ''},
+
+  {id:'timeline', q:true, paint:() => `${head(t('timeH'))}
+      ${opts([{v:'now',l:t('now')},{v:'1-3',l:t('m13')},{v:'3-6',l:t('m36')},{v:'exploring',l:t('explore')}], A.timeline)}${nav(false)}`,
+    pick:v => { A.timeline = v; }},
+
+  {id:'budget', q:true, paint:() => `${head(sellSide() ? t('budSellH') : t('budBuyH'))}
+      ${field('f-budget', '$', A.budget==='notsure'?'':A.budget, 'text', 0, 'inputmode="decimal" placeholder="$"')}
+      <div class="field" style="--i:1">${chips('budgetns', [{v:'notsure',l:t('notSure')}], A.budget==='notsure'?'notsure':'')}</div>
+      ${nav()}`,
+    keep:() => { const v = $('#f-budget').value.trim(); if (v) A.budget = v; else if (A.budget !== 'notsure') A.budget = ''; },
+    validate:() => ''},
+
+  {id:'lender', q:true, show:() => !sellSide(), paint:() => `${head(t('lenderH'))}
+      ${opts([{v:'yes',l:t('yes')},{v:'no',l:t('no')},{v:'referral',l:t('referral')}], A.lender)}${nav(false)}`,
+    pick:v => { A.lender = v; }},
+
+  {id:'agent', q:true, paint:() => `${head(t('agentH'))}
+      ${opts([{v:'yes',l:t('yes')},{v:'no',l:t('no')}], A.agent)}${nav(false)}`,
+    pick:v => { A.agent = v; }},
+
+  {id:'goals', q:true, paint:() => `${head(t('goalsH'), t('optional'))}
+      <div class="field"><textarea id="f-goals" placeholder="${esc(t('goalsPh'))}">${esc(A.goals)}</textarea></div>${nav()}`,
+    keep:() => { A.goals = $('#f-goals').value.trim(); },
+    validate:() => ''},
+
+  {id:'source', q:true, paint:() => `${head(t('sourceH'))}
+      ${opts([{v:'facebook',l:t('fb')},{v:'instagram',l:t('ig')},{v:'youtube',l:t('yt')},{v:'google',l:t('google')},{v:'friend',l:t('friend')},{v:'other',l:t('other')}], A.source)}
+      <div class="otherbox" id="srcbox" ${A.source==='other'?'':'hidden'}>${field('f-src', t('otherPh'), A.sourceOther)}</div>
+      ${nav(A.source==='other')}`,
+    pick:v => { A.source = v; const sb = $('#srcbox'); if (v === 'other'){ reveal('#srcbox', '#f-src'); showNext(); return false; } if (sb) sb.hidden = true; },
+    keep:() => { const o = $('#f-src'); if (o) A.sourceOther = o.value.trim(); },
+    validate:() => A.source==='other' && !A.sourceOther ? 'errOther' : ''},
+
+  {id:'review', paint:() => {
+      const L = k => ({buy:t('buy'),sell:t('sell'),invest:t('invest'),val:t('val'),other:t('other'),now:t('now'),'1-3':t('m13'),'3-6':t('m36'),exploring:t('explore'),yes:t('yes'),no:t('no'),referral:t('referral'),call:t('call'),text:t('text'),email:t('emailOpt'),facebook:t('fb'),instagram:t('ig'),youtube:t('yt'),google:t('google'),friend:t('friend'),notsure:t('notSure')}[k] ?? k);
+      const rows = [
+        [t('name'), A.name, 'contact'], [t('phone'), A.phone, 'contact'], [t('email'), A.email, 'contact'], [t('prefer'), L(A.prefer), 'contact'],
+        [t('language'), A.language, 'welcome'],
+        [t('service'), A.service==='other' ? A.serviceOther : L(A.service), 'service'],
+        [t('city'), A.city, 'location'], [t('county'), A.county==='other' ? A.countyOther : A.county, 'location'],
+        [t('timeline'), L(A.timeline), 'timeline'], [t('budget'), L(A.budget), 'budget'],
+        ...(sellSide() ? [] : [[t('lender'), L(A.lender), 'lender']]),
+        [t('agent'), L(A.agent), 'agent'], [t('goals'), A.goals, 'goals'],
+        [t('source'), A.source==='other' ? A.sourceOther : L(A.source), 'source']
+      ].filter(r => r[1]);
+      return `<h1>${esc(t('reviewH'))}</h1><div class="review">${rows.map((r,i) =>
+        `<div class="row" style="--i:${i}"><span>${esc(r[0])}</span><b>${esc(r[1])}</b><button type="button" data-edit="${r[2]}">${esc(t('edit'))}</button></div>`).join('')}</div>
+        <p class="consent">${esc(t('consent'))}</p>${nav(true, true, t('send'))}`;
+    },
+    validate:() => ''},
+
+  {id:'done', paint:() => `<div class="done"><svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52"/><path d="M38 62l15 15 30-32"/></svg>
+      <h1>${esc(t('doneH')((A.name||'').split(' ')[0]))}</h1><p class="sub">${esc(t('doneSub'))}</p>${SUBMIT_URL?'':`<p class="sub hint">${esc(t('doneNote'))}</p>`}</div>`}
+];
+
+/* ---------- engine ---------- */
+const visible = () => STEPS.filter(s => !s.show || s.show());
+const step = id => STEPS.find(s => s.id === id);
+function stepInfo(){ const qs = visible().filter(s => s.q), i = qs.findIndex(s => s.id === cur); return i < 0 ? null : {n:i+1, total:qs.length}; }
+function progress(){
+  const qs = visible().filter(s => s.q), i = qs.findIndex(s => s.id === cur);
+  const pct = cur==='welcome' ? 0 : (cur==='review' || cur==='done') ? 100 : Math.round((i+1)/(qs.length+1)*100);
+  $('#bar').style.width = pct + '%';
+}
+function go(id, dir=1){
+  const card = $('#card');
+  const swap = () => {
+    cur = id; card.innerHTML = step(id).paint(); bind();
+    card.style.setProperty('--dy', (dir>0?28:-28)+'px'); card.classList.remove('out'); card.classList.add('pre');
+    void card.offsetWidth; card.classList.remove('pre'); progress();
+    if (!coarse){ const f = card.querySelector('input,textarea'); if (f) f.focus({preventScroll:true}); }
+    if (id === 'done'){ ring = true; pulse(); }
+  };
+  if (reduce || !card.innerHTML){ swap(); return; }
+  card.style.setProperty('--dy', (dir>0?-28:28)+'px'); card.classList.add('out'); setTimeout(swap, 320);
+}
+function next(){
+  const s = step(cur); if (s.keep) s.keep();
+  const e = s.validate ? s.validate() : ''; if (e) return fail(e);
+  if (cur === 'review') return submit();
+  const v = visible(), i = v.findIndex(x => x.id === cur); go(v[i+1].id, 1);
+}
+function back(){ const s = step(cur); if (s.keep) s.keep(); const v = visible(), i = v.findIndex(x => x.id === cur); if (i > 0) go(v[i-1].id, -1); }
+function fail(key){ const el = $('#err'); if (el){ el.textContent = t(key); el.classList.add('show'); } const c = $('#card'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }
+function reveal(box, input){ const b = $(box); b.hidden = false; b.querySelector('.field').style.animation = 'rise .45s var(--ease) both'; if (!coarse) setTimeout(() => $(input).focus(), 60); }
+function showNext(){ const n = $('.nav'); if (n && !n.querySelector('[data-act=next]')){ n.insertAdjacentHTML('afterbegin', `<button type="button" class="btn" data-act="next">${esc(t('cont'))}</button>`); n.querySelector('[data-act=next]').onclick = next; } }
+function ripple(btn, e){
+  const r = btn.getBoundingClientRect(), s = document.createElement('span'), size = Math.max(r.width, r.height)*2.6;
+  const x = (e && e.clientX ? e.clientX - r.left : r.width/2) - size/2, y = (e && e.clientY ? e.clientY - r.top : r.height/2) - size/2;
+  s.className = 'rip'; Object.assign(s.style, {width:size+'px', height:size+'px', left:x+'px', top:y+'px'}); btn.appendChild(s);
+}
+function bind(){
+  const card = $('#card'), s = step(cur);
+  card.querySelectorAll('[data-act=next]').forEach(b => b.onclick = next);
+  card.querySelectorAll('[data-act=back]').forEach(b => b.onclick = back);
+  card.querySelectorAll('.opt').forEach(b => b.onclick = e => {
+    if (b.classList.contains('sel') && b.dataset.v !== 'other' && s.pick){ if (s.pick(b.dataset.v, b) !== false) next(); return; }
+    card.querySelectorAll('.opt').forEach(o => { o.classList.remove('sel'); o.querySelectorAll('.rip').forEach(r => r.remove()); });
+    ripple(b, e); b.classList.add('sel'); pulse(b);
+    const stay = s.pick ? s.pick(b.dataset.v, b) === false : false;
+    if (!stay) setTimeout(next, reduce ? 0 : 460);
+
+  });
+  card.querySelectorAll('[data-chips]').forEach(g => g.querySelectorAll('.chip').forEach(c => c.onclick = () => {
+    const name = g.dataset.chips, was = c.classList.contains('sel');
+    g.querySelectorAll('.chip').forEach(x => x.classList.remove('sel'));
+    if (name === 'budgetns'){ if (!was){ c.classList.add('sel'); $('#f-budget').value = ''; A.budget = 'notsure'; pulse(c); setTimeout(next, reduce ? 0 : 380); } else A.budget = ''; return; }
+    A[name] = was ? '' : c.dataset.v; if (!was){ c.classList.add('sel'); pulse(c); }
+    if (name === 'county'){ const box = $('#countybox'); if (A.county === 'other') reveal('#countybox', '#f-county'); else box.hidden = true; }
+  }));
+  card.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => go(b.dataset.edit, -1));
+  const bud = $('#f-budget'); if (bud) bud.oninput = () => { if (bud.value) { A.budget = bud.value; card.querySelectorAll('[data-chips=budgetns] .chip').forEach(x => x.classList.remove('sel')); } };
+  const e = $('#err'); card.querySelectorAll('input,textarea').forEach(f => f.addEventListener('input', () => e && e.classList.remove('show')));
+}
+async function submit(){
+  A.submittedAt = new Date().toISOString();
+  if (SUBMIT_URL){
+    try { await fetch(SUBMIT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(A)}); }
+    catch (err) { return fail('sendErr'); }
+  } else console.info('Preview — not sent:', A);
+  go('done', 1);
+}
+function setLang(l){
+  lang = l; A.language = l === 'es' ? 'Español' : 'English'; document.documentElement.lang = l;
+  document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === l));
+  $('#preview').textContent = SUBMIT_URL ? '' : t('preview'); $('#preview').hidden = !!SUBMIT_URL;
+  $('#foot').innerHTML = `<b>${esc(AGENT.name)}</b> · ${esc(AGENT.phone)} · ${esc(AGENT.email)}<br><b>${esc(BROKER.name)}</b> · ${esc(BROKER.address)} · ${esc(BROKER.phone)}`;
+}
+document.querySelectorAll('.lang button').forEach(b => b.onclick = () => {
+  const s = step(cur); if (s.keep) s.keep();
+  setLang(b.dataset.lang); const card = $('#card'); card.innerHTML = s.paint(); bind(); progress();
+});
+addEventListener('keydown', e => {
+  const tag = document.activeElement ? document.activeElement.tagName : '';
+  if (e.key === 'Enter' && !e.shiftKey){
+    if (tag === 'TEXTAREA' && !(e.ctrlKey || e.metaKey)) return;
+    if (tag === 'BUTTON') return;
+    const b = $('#card [data-act=next]'); if (b){ e.preventDefault(); b.click(); }
+  } else if (/^[1-9]$/.test(e.key) && tag !== 'INPUT' && tag !== 'TEXTAREA'){
+    const o = document.querySelectorAll('#card .opt')[+e.key - 1]; if (o) o.click();
+  }
+});
+setLang('en'); A.language = undefined; go('welcome');
+</script>
+</body>
+</html>
