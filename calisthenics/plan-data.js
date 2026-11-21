@@ -90,7 +90,7 @@
       ],
     },
     power: {
-      name: 'Power', short: 'POWER', note: 'Fast up, slow down. 4–6 reps only. Feet stay on the ground — no jumping, hopping, burpees or sprinting yet. Perfect form or the rep doesn’t count. Power stops when speed stops. Fast-intent training improves how fast you produce force.',
+      name: 'Power', short: 'POWER', note: 'Done first in the session, right after the warm-up, while your legs are fresh. Fast up, slow down. 4–6 reps only. Feet stay on the ground — no jumping, hopping, burpees or sprinting yet. Perfect form or the rep doesn’t count. Power stops when speed stops. Fast-intent training improves how fast you produce force.',
       steps: [
         { id: 'pow0', name: 'Fast Squat — Down Slow, Stand Explosive', demo: 'fastSquat', sets: 3, reps: [5, 5], unit: 'reps', tempo: 'Down 3 sec · stand fast', rest: REST.powSquat,
           cues: ['Down slow, 3 sec', 'Stand up as fast as you can', 'Feet stay on the floor'], feel: 'Snap through the hips.', wrong: 'Jumping off the floor.', unlock: UNLOCK_RULE },
@@ -153,9 +153,10 @@
   SUBS.forEach((s) => { EX[s.id] = s; });
 
   const DAYS = {
-    A: { name: 'Push + Legs + Big 3', items: [{ lad: 'push' }, { lad: 'legs' }, { lad: 'core' }, { lad: 'power' }, { ex: 'tHalf' }] },
-    B: { name: 'Pull + Hinge + Core', items: [{ lad: 'pull' }, { lad: 'legs' }, { lad: 'core' }, { lad: 'power' }, { ex: 'tY' }] },
-    C: { name: 'Full Body + Mobility', items: [{ lad: 'push' }, { lad: 'pull' }, { lad: 'legs' }, { lad: 'power' }, { flow: true }] },
+    // Power goes first (fresh legs = fast reps); tendon block last.
+    A: { name: 'Push + Legs + Big 3', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'legs' }, { lad: 'core' }, { ex: 'tHalf' }] },
+    B: { name: 'Pull + Hinge + Core', items: [{ lad: 'power' }, { lad: 'pull' }, { lad: 'legs' }, { lad: 'core' }, { ex: 'tY' }] },
+    C: { name: 'Full Body + Mobility', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'pull' }, { lad: 'legs' }, { flow: true }] },
   };
 
   const VARIATIONS = [

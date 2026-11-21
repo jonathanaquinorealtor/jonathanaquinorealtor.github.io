@@ -6,8 +6,10 @@
   const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const daysBetween = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   const fmtDate = (s) => { if (!s) return 'Date not recovered'; const d = new Date(s + 'T12:00:00'); return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); };
-  const DEFAULT_STEPS = { push: 2, pull: 0, legs: 0, core: 0, power: 0 };
+  const DEFAULT_STEPS = { push: 1, pull: 0, legs: 0, core: 0, power: 0 }; // step_index (0-based)
   const LADDER_KEYS = ['push', 'pull', 'legs', 'core', 'power'];
+  const SN = (i) => i + 1; // steps are shown counting from 1 (your saved data uses this)
+  const SNOF = (k) => ' of ' + P.LADDERS[k].steps.length;
 
   // ---------------- store ----------------
   const COLS = ['plan', 'ladders', 'logs', 'checks', 'changes', 'fit', 'body'];
@@ -86,7 +88,7 @@
   function setsTarget(ex) { return inDeload() ? Math.ceil(ex.sets / 2) : ex.sets; }
   function aimFor(ex) {
     // last entry for this exercise -> +1 on weakest set (or the range bottom)
-    const prev = entriesFor((e) => e.ex === ex.id).pop();
+    const prev = entriesFor((e) => e.ex === ex.id && e.completed !== false).pop();
     const n = setsTarget(ex);
     const lo = ex.reps[0], hi = ex.reps[1];
     if (!prev || !prev.sets || !prev.sets.length) return Array(n).fill(lo);
@@ -106,13 +108,13 @@
     const top = ex.reps[1], bottom = ex.reps[0];
     const sets = entry.sets || [];
     const nT = ex.sets;
-    const prevAtStep = entriesFor((e) => e.ladder === k && e.step === step && e.ex === ex.id);
+    const prevAtStep = entriesFor((e) => e.ladder === k && e.step === step && e.ex === ex.id && e.completed !== false);
     // prevAtStep already excludes this entry (not saved yet)
     const prev = prevAtStep[prevAtStep.length - 1];
     const stepDown = (why) => {
       if (step === 0) { msgs.push(why + ' You are on the first step, so swap to the substitute for this pattern (see How To) or skip it this week.'); return { msgs, newStep: step }; }
       const nx = P.LADDERS[k].steps[step - 1];
-      msgs.push(why + ' Next time you drop to Step ' + (step - 1) + ': ' + nx.name + '.');
+      msgs.push(why + ' Next time you drop to Step ' + SN(step - 1) + ': ' + nx.name + '.');
       return { msgs, newStep: step - 1 };
     };
     if (inDeload()) { msgs.push(name + ': deload week — level held. Stop with 4+ reps left.'); return { msgs, newStep: step }; }
@@ -147,8 +149,8 @@
       if (L.hold) { msgs.push(name + ': top of range, but your next-morning check said hold. Level held one more session.'); return { msgs, newStep: step, clearHold: true }; }
       if (prevTop && step < P.LADDERS[k].steps.length - 1) {
         const nx = P.LADDERS[k].steps[step + 1];
-        if (nx.gate) { msgs.push(name + ': top of range 2 sessions in a row — you earned Step ' + (step + 1) + ' (' + nx.name + '), but it has a gate: ' + nx.gate + ' Use “Move up” in Me when you meet it.'); return { msgs, newStep: step }; }
-        msgs.push(name + ': top of the range on every set, 2 sessions in a row, form clean, pain green — you move up to Step ' + (step + 1) + ': ' + nx.name + '.');
+        if (nx.gate) { msgs.push(name + ': top of range 2 sessions in a row — you earned Step ' + SN(step + 1) + ' (' + nx.name + '), but it has a gate: ' + nx.gate + ' Use “Move up” in Me when you meet it.'); return { msgs, newStep: step }; }
+        msgs.push(name + ': top of the range on every set, 2 sessions in a row, form clean, pain green — you move up to Step ' + SN(step + 1) + ': ' + nx.name + '.');
         return { msgs, newStep: step + 1 };
       }
       if (step === P.LADDERS[k].steps.length - 1) { msgs.push(name + ': top of range — you are at the top of this ladder. Add a slower tempo or a pause at the hardest point.'); return { msgs, newStep: step }; }
@@ -174,7 +176,7 @@
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3600); }
   function ladderDots(k) {
     const n = P.LADDERS[k].steps.length, st = stepOf(k);
-    let h = '<span class="dots" aria-label="Step ' + st + ' of ' + (n - 1) + '">';
+    let h = '<span class="dots" aria-label="Step ' + SN(st) + ' of ' + n + '">';
     for (let i = 0; i < n; i++) h += '<i class="' + (i < st ? 'done' : i === st ? 'on' : '') + '"></i>';
     return h + '</span>';
   }
@@ -235,6 +237,7 @@
     h += morningCheckCard();
     if (lastResult) h += changedCard(lastResult.msgs, 'What changed and why', true);
     else { const recent = changesSorted().slice(0, 3); if (recent.length) h += changedCard(recent.map((c) => c.text), 'Recent changes', false); }
+    h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li></ul></section>';
     h += '<div class="warm"><b>Warm-up</b> Mobility Flow 1–5 (about 5 min) <a href="#mobility">Open flow</a></div>';
     DY.items.forEach((it, i) => { h += it.flow ? flowCard(i) : exCard(it.lad ? curEx(it.lad) : P.EX[it.ex], i + 1); });
     h += '<div class="finish"><button type="button" id="finish" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Finish workout + save</button><p class="fine">Saves your sets, ratings and pain. The plan then adapts: pain first, then form, then reps and feedback.</p></div>';
@@ -251,7 +254,7 @@
     const aim = ex.ladder ? aimFor(ex) : Array(nSets).fill(ex.reps[0]);
     let h = '<article class="card ex" data-ex="' + ex.id + '">';
     h += '<div class="ex-top"><span class="num">' + n + '</span><div class="ex-head">';
-    if (ex.ladder) h += '<div class="tag">' + P.LADDERS[ex.ladder].short + ' · STEP ' + ex.step + ' ' + ladderDots(ex.ladder) + '</div>';
+    if (ex.ladder) h += '<div class="tag">' + P.LADDERS[ex.ladder].short + ' · STEP ' + SN(ex.step) + SNOF(ex.ladder) + ' ' + ladderDots(ex.ladder) + '</div>';
     else h += '<div class="tag">TENDON · ' + esc(ex.tendon) + '</div>';
     h += '<h3>' + esc(ex.name) + '</h3><div class="dose">' + doseLine(ex) + '</div><div class="tempo">Tempo: ' + esc(ex.tempo) + '</div></div></div>';
     h += demoBtn(ex.id);
@@ -260,6 +263,8 @@
     if (ex.extra) h += '<p class="feel">' + esc(ex.extra) + '</p>';
     h += restChips(ex.rest);
     if (ex.unlock) h += '<p class="unlock"><b>Level up:</b> ' + esc(ex.unlock) + '</p>';
+    const lastE = entriesFor((e) => e.ex === ex.id).pop();
+    if (lastE) h += '<p class="lasttime"><b>Last time (' + fmtDate(lastE.date) + '):</b> ' + (lastE.completed === false ? 'not done' : (lastE.sets || []).join(' · ') + ' ' + (/sec/.test(ex.unit) ? 'sec' : 'reps')) + (lastE.note ? ' — “' + esc(lastE.note) + '”' : '') + '</p>';
     // logging
     const unitShort = /sec/.test(ex.unit) ? 'sec' : /holds/.test(ex.unit) ? 'holds' : 'reps';
     h += '<div class="logbox"><div class="lb-title">Log it' + (/side|leg/.test(ex.unit) ? ' <small>(log your weaker side)</small>' : '') + '</div><div class="sets">';
@@ -273,6 +278,8 @@
     h += '<label class="pain"><span>Back / joint pain <b class="pv ' + painClass(pv) + '">' + (d.pain == null ? '–' : pv) + '/10</b></span><input id="p-' + ex.id + '" type="range" min="0" max="10" step="1" value="' + pv + '" data-pain></label>';
     h += '<div class="painkey"><span class="g">0–3 go</span><span class="a">4–5 hold</span><span class="r">6+ step down</span></div>';
     h += '<label class="formchk"><input id="f-' + ex.id + '" type="checkbox" data-form ' + (d.form !== false ? 'checked' : '') + '> Form stayed clean (neutral spine every rep)</label>';
+    h += '<label class="notes"><span>Notes (how it felt)</span><textarea id="n-' + ex.id + '" rows="2" data-note placeholder="Burn, shaky, balance, anything…">' + esc(d.note || '') + '</textarea></label>';
+    h += '<label class="formchk"><input id="x-' + ex.id + '" type="checkbox" data-skip ' + (d.skipped ? 'checked' : '') + '> Couldn’t do it today (logs it as not done — not a fail)</label>';
     if (ex.ladder) h += '<p class="fine">Set 1 at RPE 9–10, or 2+ reps short? Drop one step for sets 2–3 instead of grinding.</p>';
     h += '</div></article>';
     return h;
@@ -290,7 +297,7 @@
     return h;
   }
   function stopRulesCard(compact) {
-    return '<section class="stop"><h2>Stop rules</h2><p>End the session and seek care for: sharp or shooting back pain · new numbness or tingling in a leg or foot · leg weakness · pain shooting below the knee that does not ease · any bladder or bowel change.</p>' + (compact ? '' : '<p>Muscle burn and effort are fine. Those signals are not.</p>') + '<p class="fine">General fitness information, not medical advice. A clinician or physical therapist’s guidance wins.</p></section>';
+    return '<section class="stop"><h2>Stop rules</h2><p>End the session and seek care for: sharp or shooting back pain · new numbness or tingling in a leg or foot · leg weakness · pain shooting below the knee that does not ease · any bladder or bowel change.</p><p><b>Feel sick, dizzy or light-headed?</b> Stop, sit down, sip water. Log the rest as “couldn’t do it”. If it keeps happening, or comes with chest pain or shortness of breath, get checked.</p>' + (compact ? '' : '<p>Muscle burn and effort are fine. Those signals are not.</p>') + '<p class="fine">General fitness information, not medical advice. A clinician or physical therapist’s guidance wins.</p></section>';
   }
 
   // ---- next-morning check
@@ -331,8 +338,8 @@
         if (st > 0) {
           const nx = P.LADDERS[k].steps[st - 1];
           await put('ladders', k, { step: st - 1, hold: false, history: (L.history || []).concat([{ date: todayStr(), from: st, to: st - 1, dir: 'down', why: '24-hour check: red' }]) });
-          msgs.push('24-hour check is RED (' + pain + '/10, ' + feel + '). ' + P.LADDERS[k].name + ' steps down to Step ' + (st - 1) + ': ' + nx.name + '. If it still hurts, remove that move for this week.');
-        } else msgs.push('24-hour check is RED. ' + P.LADDERS[k].name + ' is already at Step 0 — swap to the substitute or skip it this week.');
+          msgs.push('24-hour check is RED (' + pain + '/10, ' + feel + '). ' + P.LADDERS[k].name + ' steps down to Step ' + SN(st - 1) + ': ' + nx.name + '. If it still hurts, remove that move for this week.');
+        } else msgs.push('24-hour check is RED. ' + P.LADDERS[k].name + ' is already at Step 1 — swap to the substitute or skip it this week.');
       } else {
         for (const k2 of lads) { const L = ladderState(k2); await put('ladders', k2, { step: stepOf(k2), hold: true, history: (L.history || []).slice() }); }
         msgs.push('24-hour check is RED (' + pain + '/10). Not sure which move: all of that day’s levels are held, and nothing moves up until things settle.');
@@ -353,7 +360,7 @@
     const out = [];
     for (const k of LADDER_KEYS) {
       const step = stepOf(k);
-      const es = entriesFor((e) => e.ladder === k && e.step === step);
+      const es = entriesFor((e) => e.ladder === k && e.step === step && e.completed !== false);
       if (es.length >= 3) {
         const t = es.slice(-3).map((e) => (e.sets || []).reduce((a, b) => a + b, 0));
         if (t[2] < t[1] && t[1] < t[0]) out.push(P.LADDERS[k].name + ': reps dropped two sessions in a row. That is a sign for a lighter week now (reactive deload).');
@@ -381,8 +388,9 @@
       const ex = it.lad ? curEx(it.lad) : P.EX[it.ex];
       const d = D(ex.id);
       const sets = (d.sets || []).map((v) => (v === '' || v == null ? null : Number(v))).filter((v) => v != null && !isNaN(v));
+      if (d.skipped) { entries.push({ ex: ex.id, ladder: ex.ladder || null, step: ex.ladder ? ex.step : null, unit: ex.unit, sets: [], target: ex.reps, completed: false, note: d.note || '', pain: d.pain == null ? 0 : d.pain }); continue; }
       if (!sets.length) continue;
-      entries.push({ ex: ex.id, ladder: ex.ladder || null, step: ex.ladder ? ex.step : null, unit: ex.unit, sets, target: ex.reps, rating: d.rating || 'right', pain: d.pain == null ? 0 : d.pain, form: d.form !== false });
+      entries.push({ ex: ex.id, ladder: ex.ladder || null, step: ex.ladder ? ex.step : null, unit: ex.unit, sets, target: ex.reps, rating: d.rating || 'right', pain: d.pain == null ? 0 : d.pain, form: d.form !== false, note: d.note || '', completed: true });
     }
     if (!entries.length) { toast('Log at least one set first.'); return; }
     const msgs = [];
@@ -391,6 +399,7 @@
     // evaluate before saving (so "previous" = earlier sessions)
     const ladderUpdates = {};
     for (const e of entries) {
+      if (e.completed === false) { msgs.push((P.EX[e.ex] ? P.EX[e.ex].name : 'That move') + ': not done today — no change to your level. Same plan next time.' + (/sick|nause|dizz|light/i.test(e.note || '') ? ' Feeling sick is a stop signal, not a fail: eat a light snack 1–2 h before training, sip water, and stop if it comes back.' : '')); continue; }
       if (!e.ladder) {
         if (e.pain >= 6) msgs.push(P.EX[e.ex] ? P.EX[e.ex].name + ': pain ' + e.pain + '/10 is RED. Drop it this week; tendon work must stay ≤3/10 and be back to baseline by the next morning.' : 'Pain was high — rest that area.');
         else if (e.pain >= 4) msgs.push((P.EX[e.ex] ? P.EX[e.ex].name : 'Mobility') + ': pain ' + e.pain + '/10 is AMBER. Hold the same hold time next session.');
@@ -442,7 +451,7 @@
   }
   function miniCard(ex, state) {
     let h = '<article class="card mini ' + (state || '') + '">';
-    h += '<div class="mini-head"><div>' + (ex.ladder ? '<div class="tag">STEP ' + ex.step + (state === 'here' ? ' · <b>YOU ARE HERE</b>' : state === 'done' ? ' · DONE' : '') + '</div>' : (ex.tendon ? '<div class="tag">' + esc(ex.tendon) + '</div>' : '')) + '<h3>' + esc(ex.name) + '</h3><div class="dose">' + doseLine(ex) + (ex.tempo ? ' · ' + esc(ex.tempo) : '') + '</div></div>' + demoBtn(ex.id) + '</div>';
+    h += '<div class="mini-head"><div>' + (ex.ladder ? '<div class="tag">STEP ' + SN(ex.step) + (state === 'here' ? ' · <b>YOU ARE HERE</b>' : state === 'done' ? ' · DONE' : '') + '</div>' : (ex.tendon ? '<div class="tag">' + esc(ex.tendon) + '</div>' : '')) + '<h3>' + esc(ex.name) + '</h3><div class="dose">' + doseLine(ex) + (ex.tempo ? ' · ' + esc(ex.tempo) : '') + '</div></div>' + demoBtn(ex.id) + '</div>';
     h += cueList(ex);
     if (ex.feel) h += '<p class="feel"><b>Feel:</b> ' + esc(ex.feel) + '</p>';
     if (ex.wrong) h += '<p class="wrongtxt"><b>Avoid:</b> ' + esc(ex.wrong) + '</p>';
@@ -473,12 +482,12 @@
   function vMobility() {
     let h = '<section class="hero slim"><h1>Mobility Flow</h1><p>Daily · about 10 minutes. Flow before training; static holds after training or as a separate session.</p></section>';
     h += '<section class="block">' + P.MOBILITY.map((m, i) => miniCard(Object.assign({}, m, { name: (i + 1) + '. ' + m.name }))).join('') + '</section>';
-    h += '<section class="block"><h2>What the evidence says</h2><ul class="cues"><li>About 10 minutes per week per muscle group is the plateau — more isn’t better.</li><li>Gentle, below discomfort, gains as much range as hard stretching.</li><li>Static holds: 30–60 sec. Holds over 60 sec right before strength or power cut strength ~4–8%.</li><li>Mobility improves range of motion. Strength training is what reduces injury risk.</li></ul></section>';
+    h += '<section class="block"><h2>What the evidence says</h2><ul class="cues"><li>About 10 minutes per week per muscle group is the plateau — more isn’t better.</li><li>Gentle, below discomfort, gains as much range as hard stretching.</li><li>Static holds: 30–60 sec. Right before strength or power, holds of 60 sec or more cut performance ~4.6%; under 60 sec only ~1% (Behm 2016).</li><li>Mobility improves range of motion. Strength training is what reduces injury risk.</li></ul></section>';
     return h;
   }
   function vTendons() {
     let h = '<section class="hero slim"><h1>Tendons</h1><p>Tendons adapt slower than muscle — 8–12 weeks minimum, ideally 12+, before stiffness changes. Muscle strength rises 1–2 months earlier. Don’t rush.</p></section>';
-    h += '<section class="rules"><h2>Dose</h2><ul><li>3× per week on training days.</li><li>3–4 sets of 6–15 reps at 3 sec up / 3 sec down, or 3–5 holds of 30–45 sec at a hard effort.</li><li>Pain ≤3/10 during, back to baseline by the next morning.</li><li>Progress load only ~5–10% per week.</li><li>Easy for 15+ reps at 3/3 on two legs? Too light — go single-leg or change the angle.</li><li>Stretching and foam rolling don’t build tendon. Never swap them for loading.</li></ul></section>';
+    h += '<section class="rules"><h2>Dose</h2><ul><li>3× per week on training days.</li><li>3–4 sets of 6–15 reps at 3 sec up / 3 sec down, or 3–5 holds of 30–45 sec at a hard effort.</li><li>Pain ≤3/10 during, back to baseline by the next morning.</li><li>Progress load only ~5–10% per week.</li><li>Easy for 15+ reps at 3/3 on two legs? Too light — go single-leg or change the angle.</li><li>What grows tendon is how hard the load is, not how long you hold (Bohm 2015 meta-analysis; Schroll 2024). So progress holds by making the position harder, not longer.</li><li>Stretching and foam rolling don’t build tendon. Never swap them for loading.</li></ul></section>';
     h += '<section class="block">' + P.TENDON.map((t) => miniCard(t)).join('') + '</section>';
     return h;
   }
@@ -490,7 +499,7 @@
     for (const l of ls) {
       h += '<article class="card logrow"><div class="lr-head"><b>' + esc(l.title || 'Workout') + '</b><span>' + fmtDate(l.date) + (l.time ? ' · ' + esc(l.time) : '') + '</span></div>';
       if (l.seeded) h += '<p class="fine">' + esc(l.note || 'Recovered from your earlier plan.') + '</p>';
-      if (l.entries && l.entries.length) h += '<ul class="entries">' + l.entries.map((e) => { const ex = P.EX[e.ex]; return '<li><span>' + esc(ex ? ex.name : e.ex === 'flow' ? 'Mobility Flow' : e.ex) + (e.ladder ? ' <small>step ' + e.step + '</small>' : '') + '</span><span class="nums">' + (e.sets ? e.sets.join(' · ') : '') + ' <i class="r-' + (e.rating || '') + '">' + ({ easy: 'too easy', right: 'just right', hard: 'too hard' }[e.rating] || '') + '</i> <b class="pv ' + painClass(e.pain || 0) + '">' + (e.pain || 0) + '/10</b></span></li>'; }).join('') + '</ul>';
+      if (l.entries && l.entries.length) h += '<ul class="entries">' + l.entries.map((e) => { const ex = P.EX[e.ex]; return '<li><span>' + esc(ex ? ex.name : e.ex === 'flow' ? 'Mobility Flow' : e.ex) + (e.ladder ? ' <small>step ' + SN(e.step) + '</small>' : '') + '</span><span class="nums">' + (e.completed === false ? '<b class="pv a">Not done</b>' : (e.sets ? e.sets.join(' · ') + (e.setsNote ? ' ' + esc(e.setsNote) : '') : '') + ' <i class="r-' + (e.rating || '') + '">' + ({ easy: 'too easy', right: 'just right', hard: 'too hard' }[e.rating] || '') + '</i>' + (e.difficulty != null ? ' <i>difficulty ' + e.difficulty + ' · effectiveness ' + e.effectiveness + '</i>' : '') + ' <b class="pv ' + painClass(e.pain || 0) + '">pain ' + (e.pain || 0) + '/10</b>') + '</span>' + (e.note ? '<q>' + esc(e.note) + '</q>' : '') + '</li>'; }).join('') + '</ul>';
       const ck = S.data.checks[l.id];
       if (ck) h += '<p class="fine">Next morning: ' + esc(ck.feel) + ', ' + ck.pain + '/10 (' + esc(ck.level) + ')</p>';
       h += '</article>';
@@ -503,8 +512,9 @@
 
   // What Works
   function fitStats(id) {
-    const es = entriesFor((e) => e.ex === id);
-    if (!es.length) return null;
+    const notDone = entriesFor((e) => e.ex === id && e.completed === false).length;
+    const es = entriesFor((e) => e.ex === id && e.completed !== false);
+    if (!es.length) return { n: 0, notDone, avgPain: 0, maxPain: 0, rc: { easy: 0, right: 0, hard: 0 }, prog: 0, auto: 'Keep', why: 'Not done yet' + (notDone ? ' (' + notDone + '× not done)' : '') + ' — no data to rate.', last: null };
     const tot = (e) => (e.sets || []).reduce((a, b) => a + b, 0);
     const avgPain = es.reduce((a, e) => a + (e.pain || 0), 0) / es.length;
     const maxPain = Math.max(...es.map((e) => e.pain || 0));
@@ -513,16 +523,16 @@
     let auto = 'Keep', why = 'Pain low and it’s working.';
     if (maxPain >= 6 || avgPain >= 4) { auto = 'Drop'; why = 'Pain has been amber/red. Swap it inside the same pattern.'; }
     else if (avgPain >= 2.5 || (es.length >= 3 && prog <= 0)) { auto = 'Modify'; why = prog <= 0 && es.length >= 3 ? 'No progress yet — change one variable.' : 'Some pain — reduce range or reps.'; }
-    return { n: es.length, avgPain, maxPain, rc, prog, auto, why, last: es[es.length - 1] };
+    return { n: es.length, notDone, avgPain, maxPain, rc, prog, auto, why: why + (notDone ? ' (' + notDone + '× not done)' : ''), last: es[es.length - 1] };
   }
   function vWorks() {
     let h = '<section class="hero slim"><h1>What Works</h1><p>Each move rated on pain, feel, progress and enjoyment → Keep, Modify or Drop.</p></section>';
     const ids = [...new Set(entriesFor(() => true).map((e) => e.ex))].filter((id) => P.EX[id]);
-    if (!ids.length) h += '<p class="empty card">No logged sets yet. After your first logged workout, each exercise gets a Keep / Modify / Drop rating here. Your 3 earlier workouts were recovered without set details, so they can’t be rated.</p>';
+    if (!ids.length) h += '<p class="empty card">No logged sets yet. After your first logged workout, each exercise gets a Keep / Modify / Drop rating here.</p>';
     for (const id of ids) {
       const ex = P.EX[id]; const st = fitStats(id); const f = S.data.fit[id] || {};
       const verdict = f.verdict || st.auto;
-      h += '<article class="card works"><div class="mini-head"><div><div class="tag">' + (ex.ladder ? P.LADDERS[ex.ladder].short + ' · STEP ' + ex.step : 'TENDON') + '</div><h3>' + esc(ex.name) + '</h3></div><span class="verdict v-' + verdict.toLowerCase() + '">' + verdict + '</span></div>';
+      h += '<article class="card works"><div class="mini-head"><div><div class="tag">' + (ex.ladder ? P.LADDERS[ex.ladder].short + ' · STEP ' + SN(ex.step) : 'TENDON') + '</div><h3>' + esc(ex.name) + '</h3></div><span class="verdict v-' + verdict.toLowerCase() + '">' + verdict + '</span></div>';
       h += '<div class="stats"><div><b>' + st.n + '</b><span>sessions</span></div><div><b class="pv ' + painClass(st.avgPain) + '">' + st.avgPain.toFixed(1) + '</b><span>avg pain</span></div><div><b>' + (st.prog > 0 ? '+' : '') + st.prog + '</b><span>progress (total)</span></div><div><b>' + st.rc.easy + '/' + st.rc.right + '/' + st.rc.hard + '</b><span>easy/right/hard</span></div></div>';
       h += '<p class="fine">' + (f.verdict ? 'Your call: ' + esc(f.verdict) + '. Plan’s read: ' + esc(st.auto) + ' — ' : 'Plan’s read: ') + esc(st.why) + '</p>';
       h += '<div class="enjoy" data-fit="' + id + '"><span>Enjoy</span>' + [1, 2, 3, 4, 5].map((n) => '<button type="button" data-enjoy="' + n + '" class="' + ((f.enjoy || 0) >= n ? 'on' : '') + '" aria-label="' + n + ' of 5">★</button>').join('') + '</div>';
@@ -543,9 +553,9 @@
     h += '<section class="block"><h2>My levels</h2>';
     for (const k of LADDER_KEYS) {
       const L = ladderState(k), st = stepOf(k), ex = curEx(k);
-      h += '<article class="card lvl"><div class="mini-head"><div><div class="tag">' + P.LADDERS[k].short + ' ' + ladderDots(k) + '</div><h3>Step ' + st + ': ' + esc(ex.name) + '</h3>' + (L.hold ? '<div class="pill amber">On hold from a 24-hour check</div>' : '') + (L.fallback ? '<div class="fine">Not saved yet — showing the starting step.</div>' : '') + '</div></div>';
+      h += '<article class="card lvl"><div class="mini-head"><div><div class="tag">' + P.LADDERS[k].short + ' ' + ladderDots(k) + '</div><h3>Step ' + SN(st) + SNOF(k) + ': ' + esc(ex.name) + '</h3>' + (L.hold ? '<div class="pill amber">On hold from a 24-hour check</div>' : '') + (L.fallback ? '<div class="fine">Not saved yet — showing the starting step.</div>' : '') + '</div></div>';
       const hist = (L.history || []).slice(-3).reverse();
-      if (hist.length) h += '<ul class="hist">' + hist.map((x) => '<li>' + fmtDate(x.date) + ': ' + (x.from == null ? '' : 'Step ' + x.from + ' → ') + 'Step ' + x.to + ' — ' + esc(x.why || '') + '</li>').join('') + '</ul>';
+      if (hist.length) h += '<ul class="hist">' + hist.map((x) => '<li>' + fmtDate(x.date) + ': ' + (x.from == null ? '' : 'Step ' + SN(x.from) + ' → ') + 'Step ' + SN(x.to) + ' — ' + esc(x.why || '') + '</li>').join('') + '</ul>';
       if (confirmMove && confirmMove.k === k) h += '<div class="confirm">Move ' + P.LADDERS[k].name + ' ' + confirmMove.dir + ' one step? <button type="button" class="primary" data-move-yes="' + k + '">Yes, move ' + confirmMove.dir + '</button> <button type="button" data-move-no>Cancel</button></div>';
       else h += '<div class="chips"><button type="button" data-move="' + k + '" data-dir="down"' + (st === 0 || !S.canWrite ? ' disabled' : '') + '>Move down</button><button type="button" data-move="' + k + '" data-dir="up"' + (st === P.LADDERS[k].steps.length - 1 || !S.canWrite ? ' disabled' : '') + '>Move up</button></div>';
       h += '</article>';
@@ -561,6 +571,15 @@
     // rest table
     h += '<section class="card"><h2>Rest times</h2><p class="fine">Default between sets: 90 seconds. If reps drop by more than 2 from set 1 to set 2 at the same level, the rest was too short. As sets get heavier, stretch rests toward 2–3 min on the hardest lifts.</p><div class="tbl"><table><tbody>' + P.REST_TABLE.map(([a, b]) => '<tr><th>' + esc(a) + '</th><td>' + esc(b) + '</td></tr>').join('') + '</tbody></table></div></section>';
     h += '<section class="card"><h2>Setup</h2><p>Mat on a hard flat floor · clear space ~2 steps each way · a plain wall · bare feet or grippy socks · phone as a timer only. No equipment. 3 days a week, 35–45 min, non-consecutive days. No 1RM testing, no jumping to start.</p></section>';
+    h += '<section class="card why"><h2>Why the plan looks like this</h2><p class="fine">Reviewed 2026-11-21 against reviews and meta-analyses. What changed, and what the research confirmed:</p><ul>' +
+      '<li><b>Changed: power goes first.</b> Moves done early in a session are done with less fatigue, so they are faster and stronger. Your Fast Squat was shaky after other squats. (<a href="https://us.humankinetics.com/blogs/excerpt/utilize-proper-workout-structure-and-exercise-order" target="_blank" rel="noopener">NSCA program design</a>, <a href="https://pubmed.ncbi.nlm.nih.gov/32077380/" target="_blank" rel="noopener">exercise-order meta-analysis</a>)</li>' +
+      '<li><b>Changed: feeling sick is a stop rule.</b> Nausea during exercise is tied to effort, training fasted, and fluid balance. Light snack 1–2 h before, sip water, ease in. (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6680692/" target="_blank" rel="noopener">Sports review</a>)</li>' +
+      '<li><b>Changed: tendon holds get harder, not longer.</b> Tendons respond to how heavy the load is, not the type or length of contraction. (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4532714/" target="_blank" rel="noopener">Bohm 2015 meta-analysis</a>, <a href="https://doaj.org/article/6de7373a65ab439ea4609085bb4a8f6e" target="_blank" rel="noopener">Schroll 2024</a>)</li>' +
+      '<li><b>Corrected: stretching numbers.</b> Holds of 60 sec or more before training cut performance about 4.6%; under 60 sec about 1%. (<a href="https://pubmed.ncbi.nlm.nih.gov/21659901/" target="_blank" rel="noopener">Kay &amp; Blazevich 2012</a>, Behm 2016)</li>' +
+      '<li><b>Confirmed: 90 sec rest.</b> Resting over 60 sec helps a little; over 90 sec adds nothing for muscle growth. (<a href="https://pubmed.ncbi.nlm.nih.gov/39205815/" target="_blank" rel="noopener">Singer 2024</a>)</li>' +
+      '<li><b>Confirmed: Big 3 is good, not magic.</b> Motor-control core work is not better than other exercise for back pain — pick what you like and tolerate. (<a href="https://pubmed.ncbi.nlm.nih.gov/26742533/" target="_blank" rel="noopener">Cochrane review</a>)</li>' +
+      '<li><b>Confirmed: no lifelong bending ban.</b> Flexion limits are for early disc symptoms; exercise is first-line care. (<a href="https://www.frontiersin.org/articles/10.3389/fphys.2024.1309663/full" target="_blank" rel="noopener">2024 review</a>)</li>' +
+      '</ul></section>';
     h += '<section class="card"><h2>About the 3D demos</h2><p class="fine">The figure is a real-time 3D mannequin built to approximate the look of a pre-rendered combat-technique demo (dark fighter, blue headband, smoky blue stage, reflective floor). It is not those videos and it is not photorealistic. Drag the figure to turn the camera.</p></section>';
     return h;
   }
@@ -587,7 +606,7 @@
       const L = ladderState(k);
       const why = 'You moved ' + P.LADDERS[k].name + ' ' + confirmMove.dir + ' by hand.';
       await put('ladders', k, { step: to, hold: false, history: (L.history || []).concat([{ date: todayStr(), from: st, to, dir: confirmMove.dir, why }]) });
-      await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: why + ' Now Step ' + to + ': ' + P.LADDERS[k].steps[to].name + '.' });
+      await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: why + ' Now Step ' + SN(to) + ': ' + P.LADDERS[k].steps[to].name + '.' });
       confirmMove = null; render(); return;
     }
     if (t.id === 'saveWt') { const v = Number($('#wt').value); if (!v || v < 80 || v > 500) { toast('Enter your weight in lbs.'); return; } await put('body', 'b' + Date.now(), { date: todayStr(), lbs: v }); $('#wt').value = ''; render(); toast('Weight saved.'); return; }
@@ -599,12 +618,14 @@
     if (!card) return;
     const d = D(card.dataset.ex);
     if (t.dataset.set != null) { d.sets[+t.dataset.set] = t.value === '' ? null : Number(t.value); saveDraft(); }
+    if (t.dataset.note != null) { d.note = t.value; saveDraft(); }
     if (t.dataset.pain != null) { d.pain = Number(t.value); saveDraft(); const b = t.parentElement.querySelector('.pv'); b.textContent = t.value + '/10'; b.className = 'pv ' + painClass(+t.value); }
   });
   document.addEventListener('change', (ev) => {
     const t = ev.target; const card = t.closest('[data-ex]');
     if (card && t.dataset.form != null) { D(card.dataset.ex).form = t.checked; saveDraft(); }
     if (card && t.dataset.done != null) { D(card.dataset.ex).done = t.checked; saveDraft(); }
+    if (card && t.dataset.skip != null) { D(card.dataset.ex).skipped = t.checked; saveDraft(); }
     if (t.dataset.chkpain != null) render();
   });
   document.addEventListener('focusout', () => { setTimeout(() => { if (render.pending && !(document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) { render.pending = false; render(); } }, 50); });

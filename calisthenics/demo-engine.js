@@ -63,7 +63,7 @@
     add(C, ball(THREE, 1, skin, 0.075, 0.14, 0.085), -0.125, 0.09, -0.03);
     add(C, ball(THREE, 1, skin, 0.13, 0.065, 0.085), 0, 0.27, -0.035);
     // abs blocks (subtle)
-    for (let i = 0; i < 3; i++) for (const sx of [-1, 1]) add(C, ball(THREE, 0.034, skin, 1.1, 0.8, 0.45), sx * 0.034, 0.02 - i * 0.055, 0.1);
+    for (let i = 0; i < 3; i++) for (const sx of [-1, 1]) add(C, ball(THREE, 0.034, skin, 1.1, 0.8, 0.45), sx * 0.034, 0.02 - i * 0.055, 0.1).userData.detail = 1;
     mk('upperBack', C, 0, 0.13, -0.02, 0.11);
     mk('chestM', C, 0, 0.12, 0.02, 0.11);
     R.neck = node('neck', C, 0, 0.29, 0, 'YXZ');
@@ -114,6 +114,11 @@
       add(an, ball(THREE, 0.034, skin), 0, 0, 0);
       add(an, ball(THREE, 1, skin, 0.043, 0.034, 0.115), 0, -0.04, 0.065);
       add(an, ball(THREE, 0.04, skin, 1, 0.85, 1), 0, -0.035, -0.015);
+      if (mats.boot) {
+        add(an, lathe(THREE, 0.11, [[0, 0.05], [1, 0.047]], mats.boot), 0, 0.075, 0).userData.boot = 1;
+        add(an, ball(THREE, 1, mats.boot, 0.052, 0.045, 0.135), 0, -0.035, 0.06).userData.boot = 1;
+        add(an, ball(THREE, 0.048, mats.boot, 1, 0.9, 1), 0, -0.03, -0.015).userData.boot = 1;
+      }
       mk('ankle' + s, an, 0, 0, 0, 0.045);
       mk('heel' + s, an, 0, -0.035, -0.02, 0.035);
       mk('toe' + s, an, 0, -0.045, 0.16, 0.025);
@@ -336,7 +341,8 @@
     const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
   }
 
-  function Player(canvas, hud) {
+  function Player(canvas, hud, opts) {
+    opts = opts || {};
     const THREE = T();
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
@@ -360,7 +366,7 @@
 
     // reflective floor (mirror figure under a translucent glossy floor)
     const floor = new THREE.Mesh(new THREE.CircleGeometry(9, 64),
-      new THREE.MeshStandardMaterial({ color: new THREE.Color(0x07111d).convertSRGBToLinear(), roughness: 0.32, metalness: 0.4, transparent: true, opacity: 0.82 }));
+      new THREE.MeshStandardMaterial({ color: new THREE.Color(0x07111d).convertSRGBToLinear(), roughness: 0.5, metalness: 0.2, transparent: true, opacity: 0.86 }));
     floor.rotation.x = -Math.PI / 2; scene.add(floor);
     const glow = new THREE.Mesh(new THREE.RingGeometry(1.25, 1.31, 96), new THREE.MeshBasicMaterial({ color: 0x2b8cff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
     glow.rotation.x = -Math.PI / 2; glow.position.y = 0.003; scene.add(glow);
@@ -388,12 +394,18 @@
 
     const lin = (h) => new THREE.Color(h).convertSRGBToLinear();
     const mk = (c, r, m, o) => { const oo = Object.assign({}, o || {}); if (oo.emissive != null) oo.emissive = lin(oo.emissive); return new THREE.MeshStandardMaterial(Object.assign({ color: lin(c), roughness: r, metalness: m }, oo)); };
-    const matsTop = { skin: mk(0x3a414c, 0.38, 0.42), shorts: mk(0x0b0d11, 0.75, 0.1), band: mk(0x1f6dff, 0.35, 0.2, { emissive: 0x0b2a70, emissiveIntensity: 0.9 }), white: mk(0xe9eef5, 0.5, 0.05), stripe: mk(0x2a7bff, 0.4, 0.1, { emissive: 0x0b2a70, emissiveIntensity: 0.7 }) };
+    const grey = opts.style === 'grey';
+    const matsTop = grey
+      ? { skin: mk(0x5f646b, 0.92, 0.0), shorts: mk(0x15171b, 0.85, 0.05), band: mk(0x1f6dff, 0.45, 0.1, { emissive: 0x0b2a70, emissiveIntensity: 0.8 }), white: mk(0x15171b, 0.85, 0.05), stripe: mk(0x15171b, 0.85, 0.05), boot: mk(0x1a1c20, 0.7, 0.1) }
+      : { skin: mk(0x3a414c, 0.38, 0.42), shorts: mk(0x0b0d11, 0.75, 0.1), band: mk(0x1f6dff, 0.35, 0.2, { emissive: 0x0b2a70, emissiveIntensity: 0.9 }), white: mk(0xe9eef5, 0.5, 0.05), stripe: mk(0x2a7bff, 0.4, 0.1, { emissive: 0x0b2a70, emissiveIntensity: 0.7 }) };
     const dim = (m) => { const c = m.clone(); c.color.multiplyScalar(0.45); if (c.emissive) c.emissive.multiplyScalar(0.5); return c; };
     const matsMir = {}; for (const k in matsTop) matsMir[k] = dim(matsTop[k]);
     const fig = buildFigure(matsTop); scene.add(fig);
+    if (grey) fig.traverse((o) => { if (o.userData.detail) o.visible = false; });
     const mirWrap = new THREE.Group(); mirWrap.scale.y = -1; scene.add(mirWrap);
     const mir = buildFigure(matsMir); mirWrap.add(mir);
+    if (grey) mir.traverse((o) => { if (o.userData.detail) o.visible = false; });
+    if (opts.noMat) mat.visible = false;
     const nodesA = [], nodesB = [];
     fig.traverse((o) => { if (!o.isMesh) nodesA.push(o); });
     mir.traverse((o) => { if (!o.isMesh) nodesB.push(o); });
@@ -404,7 +416,7 @@
     const propMatHi = mk(0x22364d, 0.45, 0.3);
     function buildProps(demo, C) {
       while (propGroup.children.length) propGroup.remove(propGroup.children[0]);
-      mat.visible = demo.mat !== false;
+      mat.visible = demo.mat !== false && !opts.noMat;
       for (const pr of (demo.props || [])) {
         // position may come from a marker at a frame
         let px = 0, py = 0, pz = 0;
