@@ -580,7 +580,7 @@
       '<li><b>Confirmed: Big 3 is good, not magic.</b> Motor-control core work is not better than other exercise for back pain — pick what you like and tolerate. (<a href="https://pubmed.ncbi.nlm.nih.gov/26742533/" target="_blank" rel="noopener">Cochrane review</a>)</li>' +
       '<li><b>Confirmed: no lifelong bending ban.</b> Flexion limits are for early disc symptoms; exercise is first-line care. (<a href="https://www.frontiersin.org/articles/10.3389/fphys.2024.1309663/full" target="_blank" rel="noopener">2024 review</a>)</li>' +
       '</ul></section>';
-    h += '<section class="card"><h2>About the 3D demos</h2><p class="fine">The figure is a real-time 3D mannequin built to approximate the look of a pre-rendered combat-technique demo (dark fighter, blue headband, smoky blue stage, reflective floor). It is not those videos and it is not photorealistic. Drag the figure to turn the camera.</p></section>';
+    h += '<section class="card"><h2>About the 3D demos</h2><p class="fine">A real-time 3D fighter styled after your reference: dark muscular body, blue headband with tails, satin trunks with blue side panels and a white waistband, high-top boots, bare hands, smoky blue stage with a glowing horizon and a wet floor. It is not those AI videos and not photorealistic — the body is built from rounded parts, so joints show. Drag the figure to turn the camera.</p></section>';
     return h;
   }
 
@@ -648,7 +648,7 @@
         player = window.DemoEngine.Player($('#pl-canvas'), {
           caption: (c, w, beep) => { const el = $('#pl-cap'); el.textContent = c || ''; el.hidden = !c; el.className = 'cap' + (w ? ' wrong' : '') + (beep ? ' beep' : ''); },
           progress: (u) => { $('#pl-bar').style.width = (u * 100).toFixed(1) + '%'; },
-        });
+        }, { style: 'fm' });
       }
       requestAnimationFrame(() => { player.resize(); player.setDemo(demo); player.play(true); player.setSpeed(1); $('#pl-pause').textContent = 'Pause'; $('#pl-slow').classList.remove('on'); player.start(); });
     } catch (e) { $('#pl-fail').hidden = false; }

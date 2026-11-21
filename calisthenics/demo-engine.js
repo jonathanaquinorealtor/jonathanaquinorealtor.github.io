@@ -129,6 +129,92 @@
     return fig;
   }
 
+
+  // Sculpted fighter (reference: dark charcoal CG fighter, satin trunks, high-top boots). Same skeleton + markers.
+  function buildFighter(mats) {
+    const THREE = T();
+    const { skin, shorts, band, white, stripe, boot, sole } = mats;
+    const fig = new THREE.Group();
+    const R = {}; const markers = [];
+    const mk = (name, parent, x, y, z, r) => { const o = node(name, parent, x, y, z); o.userData.r = r; markers.push(o); R[name] = o; return o; };
+    const add = (p, m, x, y, z, rx, ry, rz) => { m.position.set(x || 0, y || 0, z || 0); if (rx || ry || rz) m.rotation.set(rx || 0, ry || 0, rz || 0); p.add(m); return m; };
+    const E = (p, mat, x, y, z, sx, sy, sz, rx, ry, rz) => add(p, ball(THREE, 1, mat, sx, sy, sz), x, y, z, rx, ry, rz);
+    R.root = node('root', fig); R.tilt = node('tilt', R.root); R.spin = node('spin', R.tilt); R.pelvis = node('pelvis', R.spin);
+    const P = R.pelvis;
+    // trunks body + glutes
+    E(P, shorts, 0, 0.02, 0, 0.178, 0.14, 0.135);
+    E(P, shorts, 0.072, -0.02, -0.06, 0.092, 0.095, 0.085);
+    E(P, shorts, -0.072, -0.02, -0.06, 0.092, 0.095, 0.085);
+    const wb = new THREE.Mesh(new THREE.CylinderGeometry(0.168, 0.172, 0.075, 40, 1, true), white);
+    wb.scale.set(1, 1, 0.8); add(P, wb, 0, 0.105, 0);
+    mk('glute', P, 0, -0.02, -0.03, 0.12); mk('pelvisM', P, 0, 0.02, 0, 0.12);
+    // torso
+    R.abd = node('abd', P, 0, 0.11, 0, 'YXZ');
+    add(R.abd, lathe(THREE, 0.2, [[0, 0.142], [0.45, 0.138], [1, 0.158]], skin, 32), 0, 0.2, 0).scale.set(1, 1, 0.72);
+    for (let i = 0; i < 3; i++) for (const sx of [-1, 1]) E(R.abd, skin, sx * 0.036, 0.05 + i * 0.05, 0.088, 0.034, 0.024, 0.016);
+    E(R.abd, skin, 0.105, 0.09, 0.03, 0.04, 0.09, 0.05, 0, 0, -0.2); E(R.abd, skin, -0.105, 0.09, 0.03, 0.04, 0.09, 0.05, 0, 0, 0.2); // obliques
+    R.chest = node('chest', R.abd, 0, 0.17, 0, 'YXZ'); const C = R.chest;
+    E(C, skin, 0, 0.13, -0.01, 0.2, 0.18, 0.128);
+    E(C, skin, 0.078, 0.165, 0.072, 0.092, 0.068, 0.052, 0, 0, -0.12); E(C, skin, -0.078, 0.165, 0.072, 0.092, 0.068, 0.052, 0, 0, 0.12); // pecs
+    E(C, skin, 0.14, 0.1, -0.035, 0.085, 0.15, 0.09, 0, 0, 0.28); E(C, skin, -0.14, 0.1, -0.035, 0.085, 0.15, 0.09, 0, 0, -0.28); // lats
+    E(C, skin, 0, 0.265, -0.035, 0.15, 0.07, 0.09); E(C, skin, 0.085, 0.28, -0.02, 0.075, 0.05, 0.065, 0, 0, -0.5); E(C, skin, -0.085, 0.28, -0.02, 0.075, 0.05, 0.065, 0, 0, 0.5);
+    mk('upperBack', C, 0, 0.13, -0.02, 0.11); mk('chestM', C, 0, 0.12, 0.02, 0.11);
+    R.neck = node('neck', C, 0, 0.29, 0, 'YXZ');
+    add(R.neck, lathe(THREE, 0.12, [[0, 0.068], [1, 0.058]], skin), 0, 0.11, 0);
+    R.head = node('head', R.neck, 0, 0.13, 0.012); const H = R.head;
+    E(H, skin, 0, 0.012, 0, 0.09, 0.112, 0.104); E(H, skin, 0, -0.052, 0.04, 0.066, 0.058, 0.07);
+    const hb = new THREE.Mesh(new THREE.CylinderGeometry(0.098, 0.1, 0.045, 40, 1, true), band);
+    hb.scale.set(1, 1, 1.12); add(H, hb, 0, 0.035, 0.002, -0.1);
+    const knot = E(H, band, 0, 0.03, -0.11, 0.03, 0.025, 0.02);
+    for (const sx of [-1, 1]) { // long tails
+      const t1 = add(H, new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.16, 0.008), band), sx * 0.02, -0.04, -0.13, 0.6, 0, sx * 0.25);
+      add(t1, new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.14, 0.008), band), sx * 0.01, -0.14, -0.02, 0.35, 0, sx * 0.15);
+    }
+    mk('headM', H, 0, 0.01, 0, 0.105);
+    // arms
+    for (const s of ['L', 'R']) {
+      const sx = s === 'L' ? 1 : -1;
+      const sh = node('sh' + s, C, sx * 0.205, 0.232, -0.01, 'XYZ'); R['sh' + s] = sh;
+      E(sh, skin, sx * 0.014, -0.02, 0, 0.082, 0.088, 0.082);
+      add(sh, lathe(THREE, L.ua, [[0, 0.06], [0.4, 0.058], [0.85, 0.046], [1, 0.042]], skin, 28));
+      E(sh, skin, 0, -0.14, 0.03, 0.05, 0.095, 0.05); E(sh, skin, 0, -0.12, -0.03, 0.052, 0.1, 0.05);
+      mk('sh' + s + 'M', sh, 0, 0, 0, 0.07);
+      const el = node('el' + s, sh, 0, -L.ua, 0, 'XYZ'); R['el' + s] = el;
+      E(el, skin, 0, 0, 0, 0.044, 0.044, 0.044);
+      add(el, lathe(THREE, L.fa, [[0, 0.046], [0.2, 0.056], [0.7, 0.036], [1, 0.031]], skin, 28));
+      mk('elbow' + s, el, 0, 0, 0, 0.045);
+      const wr = node('wr' + s, el, 0, -L.fa, 0, 'XYZ'); R['wr' + s] = wr;
+      E(wr, skin, 0, -0.045, 0, 0.038, 0.052, 0.024); E(wr, skin, 0, -0.088, 0.004, 0.036, 0.03, 0.022);
+      E(wr, skin, sx * 0.032, -0.035, 0.014, 0.013, 0.03, 0.013, 0, 0, sx * 0.5);
+      mk('hand' + s, wr, 0, -0.055, 0, 0.035);
+    }
+    // legs
+    for (const s of ['L', 'R']) {
+      const sx = s === 'L' ? 1 : -1;
+      const hip = node('hip' + s, P, sx * 0.095, -0.03, 0, 'ZYX'); R['hip' + s] = hip;
+      add(hip, lathe(THREE, L.thigh, [[0, 0.1], [0.25, 0.102], [0.6, 0.086], [1, 0.06]], skin, 30));
+      E(hip, skin, 0, -0.24, 0.05, 0.072, 0.15, 0.055); E(hip, skin, -sx * 0.04, -0.37, 0.04, 0.045, 0.06, 0.04); E(hip, skin, 0, -0.22, -0.045, 0.066, 0.14, 0.05);
+      // satin trunk leg with blue side panel
+      add(hip, lathe(THREE, 0.29, [[0, 0.122], [0.6, 0.136], [1, 0.152]], shorts, 32), 0, 0.03, 0).scale.set(1, 1, 1.08);
+      const pn = new THREE.LatheGeometry([new THREE.Vector2(0.125, 0), new THREE.Vector2(0.139, -0.17), new THREE.Vector2(0.155, -0.29)], 8, sx > 0 ? Math.PI / 2 - 0.42 : -Math.PI / 2 - 0.42, 0.84);
+      add(hip, new THREE.Mesh(pn, stripe), 0, 0.03, 0).scale.set(1, 1, 1.08);
+      const kn = node('kn' + s, hip, 0, -L.thigh, 0); R['kn' + s] = kn;
+      E(kn, skin, 0, 0, 0.006, 0.06, 0.06, 0.06);
+      add(kn, lathe(THREE, L.shin, [[0, 0.056], [0.3, 0.058], [0.7, 0.042], [1, 0.036]], skin, 28));
+      E(kn, skin, sx * 0.02, -0.12, -0.035, 0.046, 0.1, 0.048); E(kn, skin, -sx * 0.02, -0.13, -0.032, 0.042, 0.09, 0.044);
+      mk('knee' + s, kn, 0, 0, 0.01, 0.056);
+      const an = node('an' + s, kn, 0, -L.shin, 0); R['an' + s] = an;
+      // high-top boot: shaft, white cuff, shoe, blue sole
+      add(an, lathe(THREE, 0.15, [[0, 0.056], [1, 0.05]], boot, 28), 0, 0.12, 0);
+      const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 28, 1, true), white); add(an, cuff, 0, 0.108, 0);
+      E(an, boot, 0, -0.03, 0.055, 0.056, 0.045, 0.14); E(an, boot, 0, -0.025, -0.012, 0.052, 0.048, 0.052);
+      E(an, sole, 0, -0.064, 0.055, 0.058, 0.012, 0.148);
+      mk('ankle' + s, an, 0, 0, 0, 0.045); mk('heel' + s, an, 0, -0.035, -0.02, 0.035); mk('toe' + s, an, 0, -0.045, 0.16, 0.025);
+    }
+    R.markers = markers; for (const m of markers) R[m.name] = m; fig.userData.R = R;
+    return fig;
+  }
+
   // ---------- pose math ----------
   const SYM = ['s', 'a', 't', 'e', 'h', 'b', 'r', 'k', 'f', 'z', 'y'];
   const BASE_S = { m: 'S', py: 0.955, pz: 0, px: 0, pit: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, zL: 0, zR: 0, xL: 0.12, xR: -0.12, yL: 0, yR: 0, fL: 0, fR: 0, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
@@ -395,17 +481,49 @@
     const lin = (h) => new THREE.Color(h).convertSRGBToLinear();
     const mk = (c, r, m, o) => { const oo = Object.assign({}, o || {}); if (oo.emissive != null) oo.emissive = lin(oo.emissive); return new THREE.MeshStandardMaterial(Object.assign({ color: lin(c), roughness: r, metalness: m }, oo)); };
     const grey = opts.style === 'grey';
+    const fm = opts.style === 'fm';
+    const phys = (c, r, m, cc, o) => { const oo = Object.assign({}, o || {}); if (oo.emissive != null) oo.emissive = lin(oo.emissive); return new THREE.MeshPhysicalMaterial(Object.assign({ color: lin(c), roughness: r, metalness: m, clearcoat: cc, clearcoatRoughness: 0.35 }, oo)); };
     const matsTop = grey
       ? { skin: mk(0x5f646b, 0.92, 0.0), shorts: mk(0x15171b, 0.85, 0.05), band: mk(0x1f6dff, 0.45, 0.1, { emissive: 0x0b2a70, emissiveIntensity: 0.8 }), white: mk(0x15171b, 0.85, 0.05), stripe: mk(0x15171b, 0.85, 0.05), boot: mk(0x1a1c20, 0.7, 0.1) }
       : { skin: mk(0x3a414c, 0.38, 0.42), shorts: mk(0x0b0d11, 0.75, 0.1), band: mk(0x1f6dff, 0.35, 0.2, { emissive: 0x0b2a70, emissiveIntensity: 0.9 }), white: mk(0xe9eef5, 0.5, 0.05), stripe: mk(0x2a7bff, 0.4, 0.1, { emissive: 0x0b2a70, emissiveIntensity: 0.7 }) };
     const dim = (m) => { const c = m.clone(); c.color.multiplyScalar(0.45); if (c.emissive) c.emissive.multiplyScalar(0.5); return c; };
-    const matsMir = {}; for (const k in matsTop) matsMir[k] = dim(matsTop[k]);
-    const fig = buildFigure(matsTop); scene.add(fig);
+
+    if (fm) Object.assign(matsTop, { skin: phys(0x3b3e44, 0.55, 0.08, 0.15), shorts: phys(0x101115, 0.2, 0.35, 0.8), white: phys(0xe4e7ec, 0.45, 0.05, 0.2), stripe: phys(0x1e5bff, 0.25, 0.2, 0.6, { emissive: 0x0a2a90, emissiveIntensity: 0.7 }), band: phys(0x1f5cff, 0.3, 0.1, 0.4, { emissive: 0x0b2a90, emissiveIntensity: 0.9 }), boot: phys(0x0c0d10, 0.25, 0.3, 0.9), sole: phys(0x2b6bff, 0.3, 0.1, 0.4, { emissive: 0x1840b0, emissiveIntensity: 1.0 }) });
+    const build = fm ? buildFighter : buildFigure;
+    const fig = build(matsTop); scene.add(fig);
     if (grey) fig.traverse((o) => { if (o.userData.detail) o.visible = false; });
     const mirWrap = new THREE.Group(); mirWrap.scale.y = -1; scene.add(mirWrap);
-    const mir = buildFigure(matsMir); mirWrap.add(mir);
+    const matsMir = {}; for (const k in matsTop) matsMir[k] = dim(matsTop[k]);
+    const mir = build(matsMir); mirWrap.add(mir);
     if (grey) mir.traverse((o) => { if (o.userData.detail) o.visible = false; });
     if (opts.noMat) mat.visible = false;
+    if (fm) {
+      glow.visible = false; halo.visible = false;
+      floor.material.opacity = 0.74; floor.material.roughness = 0.75; floor.material.metalness = 0.0; floor.material.color = lin(0x02040a); key.position.set(-1.5, 4.5, 2.2);
+      floor.material.color = lin(0x050a14);
+      scene.background = gradTex(THREE, 512, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#02050c'); gr.addColorStop(0.55, '#071a3a'); gr.addColorStop(1, '#02050c'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+      const flame = gradTex(THREE, 1024, 512, (g, w, h) => {
+        let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+        g.filter = 'blur(7px)';
+        for (let i = 0; i < 150; i++) {
+          const x = rnd() * w, base = h * (0.75 + rnd() * 0.25), top = h * (0.05 + rnd() * 0.55), sway = (rnd() - 0.5) * 180;
+          g.strokeStyle = 'rgba(' + (30 + rnd() * 50 | 0) + ',' + (90 + rnd() * 80 | 0) + ',255,' + (0.06 + rnd() * 0.16).toFixed(2) + ')';
+          g.lineWidth = 4 + rnd() * 26; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(x, base); g.bezierCurveTo(x + sway, base - (base - top) * 0.4, x - sway, top + (base - top) * 0.3, x + sway * 0.5, top); g.stroke();
+        }
+        g.filter = 'blur(28px)';
+        for (let i = 0; i < 20; i++) { g.fillStyle = 'rgba(30,90,255,0.10)'; g.beginPath(); g.ellipse(rnd() * w, h * (0.4 + rnd() * 0.5), 60 + rnd() * 140, 30 + rnd() * 80, 0, 0, Math.PI * 2); g.fill(); }
+      });
+      flame.wrapS = THREE.RepeatWrapping; flame.repeat.set(3, 1);
+      const back = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 8, 64, 1, true), new THREE.MeshBasicMaterial({ map: flame, transparent: true, depthWrite: false, fog: false, side: THREE.BackSide }));
+      back.position.set(0, 3.95, 0); scene.add(back);
+      const horizon = new THREE.Mesh(new THREE.CylinderGeometry(5.98, 5.98, 0.03, 96, 1, true), new THREE.MeshBasicMaterial({ color: 0x5aa8ff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, fog: false, side: THREE.BackSide }));
+      horizon.position.set(0, 0.02, 0); scene.add(horizon);
+      const hglow = new THREE.Mesh(new THREE.CylinderGeometry(5.95, 5.95, 1.2, 96, 1, true), new THREE.MeshBasicMaterial({ map: gradTex(THREE, 16, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(40,120,255,0)'); gr.addColorStop(0.5, 'rgba(60,140,255,0.55)'); gr.addColorStop(1, 'rgba(40,120,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+      hglow.material.side = THREE.BackSide; hglow.position.set(0, 0.02, 0); scene.add(hglow);
+      smokes.forEach((sp) => { sp.material.opacity = 0.35; });
+      scene.fog.near = 7; scene.fog.far = 16;
+    }
     const nodesA = [], nodesB = [];
     fig.traverse((o) => { if (!o.isMesh) nodesA.push(o); });
     mir.traverse((o) => { if (!o.isMesh) nodesB.push(o); });

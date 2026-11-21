@@ -32,8 +32,8 @@ const CUSTOM = JSON.parse(fs.readFileSync(__dirname+'/custom-caps.json','utf8'))
       filters.push(`drawtext=fontfile=${FONT}:textfile=${tf}:fontcolor=white:fontsize=30:box=1:boxcolor=${c.w?'0x8a0f18':'0x05080d'}@0.82:boxborderw=16:x=(w-text_w)/2:y=h-text_h-46:enable='between(t,${c.a},${c.b})'`);
     });
     const title = path.join(tmp,'title.txt'); fs.writeFileSync(title, (slug||name).replace(/-/g,' ').toUpperCase());
-    filters.unshift(`drawtext=fontfile=${FONT}:textfile=${title}:fontcolor=white:fontsize=34:x=28:y=26:shadowcolor=black@0.8:shadowx=2:shadowy=2`);
-    const file = path.join(out,(slug||name)+'-grey-annotated.mp4');
+    const tlen=(slug||name).length; filters.unshift(`drawtext=fontfile=${FONT}:textfile=${title}:fontcolor=white:fontsize=${Math.min(34, Math.floor(1240/tlen))}:x=28:y=26:shadowcolor=black@0.8:shadowx=2:shadowy=2`);
+    const file = path.join(out,(slug||name)+'-fighter-annotated.mp4');
     execFileSync('ffmpeg',['-y','-loglevel','error','-framerate',String(FPS),'-i',path.join(tmp,'%05d.jpg'),'-vf',filters.join(','),'-c:v','libx264','-pix_fmt','yuv420p','-crf','23','-movflags','+faststart',file]);
     fs.rmSync(tmp,{recursive:true,force:true});
     console.log('ok', file, info.total.toFixed(1)+'s', (fs.statSync(file).size/1024|0)+'KB');
