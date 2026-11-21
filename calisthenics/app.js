@@ -67,7 +67,7 @@
   const curEx = (k) => P.LADDERS[k].steps[stepOf(k)];
   const logsSorted = () => Object.entries(S.data.logs).map(([id, l]) => Object.assign({ id }, l))
     .sort((a, b) => (a.createdAt || a.date || '').localeCompare(b.createdAt || b.date || ''));
-  const realLogs = () => logsSorted().filter((l) => !l.seeded);
+  const realLogs = () => logsSorted().filter((l) => !l.seeded && l.type !== 'walk');
   function entriesFor(pred) {
     const out = [];
     for (const l of realLogs()) for (const e of (l.entries || [])) if (pred(e, l)) out.push(Object.assign({ date: l.date, logId: l.id }, e));
@@ -82,7 +82,7 @@
     if (!last) return 'A';
     return { A: 'B', B: 'C', C: 'A' }[last.day] || 'A';
   }
-  function lastSessionDate() { const ls = logsSorted().filter((l) => l.date); return ls.length ? ls[ls.length - 1].date : null; }
+  function lastSessionDate() { const ls = logsSorted().filter((l) => l.date && l.type !== 'walk'); return ls.length ? ls[ls.length - 1].date : null; }
 
   // ---------------- adaptation (Section 9) ----------------
   function setsTarget(ex) { return inDeload() ? Math.ceil(ex.sets / 2) : ex.sets; }
@@ -237,9 +237,15 @@
     h += morningCheckCard();
     if (lastResult) h += changedCard(lastResult.msgs, 'What changed and why', true);
     else { const recent = changesSorted().slice(0, 3); if (recent.length) h += changedCard(recent.map((c) => c.text), 'Recent changes', false); }
-    h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li></ul></section>';
+    h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li><li>Rough day? 1–2 sets still count — beginners gain almost as much from fewer sets.</li></ul></section>';
     h += '<div class="warm"><b>Warm-up</b> Mobility Flow 1–5 (about 5 min) <a href="#mobility">Open flow</a></div>';
-    DY.items.forEach((it, i) => { h += it.flow ? flowCard(i) : exCard(it.lad ? curEx(it.lad) : P.EX[it.ex], i + 1); });
+    let n = 0;
+    DY.items.forEach((it) => {
+      if (it.flow) { h += flowCard(n++); return; }
+      if (it.big3) { h += '<div class="blockhead"><b>Big 3 core block</b> short perfect holds · 30 sec rest</div>'; P.BIG3.forEach((b) => { h += exCard(b, ++n); }); return; }
+      h += exCard(it.lad ? curEx(it.lad) : P.EX[it.ex], ++n);
+    });
+    h += walkCard();
     h += '<div class="finish"><button type="button" id="finish" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Finish workout + save</button><p class="fine">Saves your sets, ratings and pain. The plan then adapts: pain first, then form, then reps and feedback.</p></div>';
     h += stopRulesCard(true);
     return h;
@@ -255,7 +261,7 @@
     let h = '<article class="card ex" data-ex="' + ex.id + '">';
     h += '<div class="ex-top"><span class="num">' + n + '</span><div class="ex-head">';
     if (ex.ladder) h += '<div class="tag">' + P.LADDERS[ex.ladder].short + ' · STEP ' + SN(ex.step) + SNOF(ex.ladder) + ' ' + ladderDots(ex.ladder) + '</div>';
-    else h += '<div class="tag">TENDON · ' + esc(ex.tendon) + '</div>';
+    else h += '<div class="tag">' + (ex.kind === 'big3' ? 'BIG 3 CORE BLOCK' : ex.kind === 'sub' ? 'MAIN PULL · ' + esc(ex.tendon) : 'TENDON · ' + esc(ex.tendon)) + '</div>';
     h += '<h3>' + esc(ex.name) + '</h3><div class="dose">' + doseLine(ex) + '</div><div class="tempo">Tempo: ' + esc(ex.tempo) + '</div></div></div>';
     h += demoBtn(ex.id);
     h += cueList(ex);
@@ -284,6 +290,11 @@
     h += '</div></article>';
     return h;
   }
+  function walkCard() {
+    const walks = logsSorted().filter((l) => l.type === 'walk');
+    const wk = walks.filter((l) => l.date && daysBetween(l.date, todayStr()) < 7).reduce((a, l) => a + (l.minutes || 0), 0);
+    return '<section class="card walk"><div class="tag">CONDITIONING · OFF DAYS</div><h3>Brisk walk 20–30 min</h3><p>Aerobic fitness is one of the main things that decide boxing performance. Walking builds it with the fewest aches at your weight. 2–3 times a week, on non-lifting days. Pace: you can talk, but not sing.</p><p class="fine">This week: <b>' + wk + ' min</b> walked.</p><div class="wrow"><input id="walkmin" type="number" inputmode="numeric" placeholder="minutes"><button type="button" id="saveWalk" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Log walk</button></div></section>';
+  }
   function painClass(v) { return v >= 6 ? 'r' : v >= 4 ? 'a' : 'g'; }
   function flowCard(i) {
     const d = D('flow');
@@ -302,7 +313,7 @@
 
   // ---- next-morning check
   function pendingCheck() {
-    const ls = logsSorted().filter((l) => l.date && l.date < todayStr());
+    const ls = logsSorted().filter((l) => l.date && l.date < todayStr() && l.type !== 'walk');
     const last = ls[ls.length - 1];
     if (!last || S.data.checks[last.id]) return null;
     if (daysBetween(last.date, todayStr()) > 2) return null;
@@ -383,7 +394,9 @@
     const day = selDay || suggestDay();
     const DY = P.DAYS[day];
     const entries = [];
-    for (const it of DY.items) {
+    const flat = [];
+    for (const it of DY.items) { if (it.big3) P.BIG3.forEach((b) => flat.push({ ex: b.id })); else flat.push(it); }
+    for (const it of flat) {
       if (it.flow) { const d = D('flow'); if (d.done || d.rating) entries.push({ ex: 'flow', kind: 'mobility', rating: d.rating || null, pain: d.pain || 0 }); continue; }
       const ex = it.lad ? curEx(it.lad) : P.EX[it.ex];
       const d = D(ex.id);
@@ -430,6 +443,8 @@
     let h = '<section class="hero slim"><h1>How To</h1><p>Every move, every step. Tap <b>Watch 1 rep</b> for the 3D demo with form notes.</p></section>';
     h += backRulesCard();
     for (const k of ['push', 'pull', 'legs', 'core']) h += ladderSection(k);
+    h += '<section class="block"><h2>Big 3 core block</h2><p class="fine">Every Day A and B. Short holds of 8–10 sec, descending reps (6-4-2), 2–3 sets. Low spine load: the curl-up gave the best ratio of ab work to spine compression in McGill’s lab tests. Good, not magic — a Cochrane review found this kind of core work isn’t better than other exercise for back pain.</p>' + P.BIG3.map((b) => miniCard(b)).join('') + '</section>';
+    h += '<section class="block"><h2>Extras</h2><p class="fine">The wall-check hinge is now part of the warm-up (Mobility Flow #2). The front plank pyramid is optional core work on Day C or off days.</p>' + P.EXTRAS.map((b) => miniCard(b)).join('') + '</section>';
     h += '<section class="block"><h2>Substitutes</h2>' + P.SUBS.map((s) => miniCard(s)).join('') + '</section>';
     h += '<section class="block"><h2>Swap options by pattern</h2><p class="fine">Easier → standard → harder. Use when a move hurts, doesn’t suit you, or stalls.</p>' + P.VARIATIONS.map(([t, d]) => '<details><summary>' + esc(t) + '</summary><p>' + esc(d) + '</p></details>').join('') + '</section>';
     return h;
@@ -576,6 +591,10 @@
       '<li><b>Changed: feeling sick is a stop rule.</b> Nausea during exercise is tied to effort, training fasted, and fluid balance. Light snack 1–2 h before, sip water, ease in. (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6680692/" target="_blank" rel="noopener">Sports review</a>)</li>' +
       '<li><b>Changed: tendon holds get harder, not longer.</b> Tendons respond to how heavy the load is, not the type or length of contraction. (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4532714/" target="_blank" rel="noopener">Bohm 2015 meta-analysis</a>, <a href="https://doaj.org/article/6de7373a65ab439ea4609085bb4a8f6e" target="_blank" rel="noopener">Schroll 2024</a>)</li>' +
       '<li><b>Corrected: stretching numbers.</b> Holds of 60 sec or more before training cut performance about 4.6%; under 60 sec about 1%. (<a href="https://pubmed.ncbi.nlm.nih.gov/21659901/" target="_blank" rel="noopener">Kay &amp; Blazevich 2012</a>, Behm 2016)</li>' +
+      '<li><b>Changed: Hinge &amp; Glute ladder + Big 3 block.</b> The old ladder replaced glute work with core holds as you levelled up. Now glutes progress to single-leg bridges, and the Big 3 runs every Day A/B. (<a href="https://brookbushinstitute.com/articles/electromyographic-analysis-of-gluteus-maximus-and-hamstring-activity-during-the-supine-resisted-hip-extension-exercise-versus-supine-unilateral-bridge-to-neutral" target="_blank" rel="noopener">single-leg bridge EMG</a>)</li>' +
+      '<li><b>Changed: a real pull every pull day.</b> Rows give the most lat work with the least low-back load. The Doorway Pull Hold now joins the prone work. A cheap resistance band would be the biggest upgrade. (<a href="https://www.asep.org/asep/asep/JEPonlineDecember2013_Snarr_Esco.pdf" target="_blank" rel="noopener">inverted row EMG</a>)</li>' +
+      '<li><b>Added: walking on off days.</b> Aerobic fitness is a main driver of boxing performance; walking builds it with the fewest aches. (<a href="https://pubmed.ncbi.nlm.nih.gov/40129283/" target="_blank" rel="noopener">network meta-analysis</a>)</li>' +
+      '<li><b>Changed: Day A tendon = Calf Raise Hold.</b> Day A already had two squat moves; Half-Squat Hold moved to Day C.</li>' +
       '<li><b>Confirmed: 90 sec rest.</b> Resting over 60 sec helps a little; over 90 sec adds nothing for muscle growth. (<a href="https://pubmed.ncbi.nlm.nih.gov/39205815/" target="_blank" rel="noopener">Singer 2024</a>)</li>' +
       '<li><b>Confirmed: Big 3 is good, not magic.</b> Motor-control core work is not better than other exercise for back pain — pick what you like and tolerate. (<a href="https://pubmed.ncbi.nlm.nih.gov/26742533/" target="_blank" rel="noopener">Cochrane review</a>)</li>' +
       '<li><b>Confirmed: no lifelong bending ban.</b> Flexion limits are for early disc symptoms; exercise is first-line care. (<a href="https://www.frontiersin.org/articles/10.3389/fphys.2024.1309663/full" target="_blank" rel="noopener">2024 review</a>)</li>' +
@@ -609,6 +628,7 @@
       await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: why + ' Now Step ' + SN(to) + ': ' + P.LADDERS[k].steps[to].name + '.' });
       confirmMove = null; render(); return;
     }
+    if (t.id === 'saveWalk') { const v = Number($('#walkmin').value); if (!v || v < 1 || v > 300) { toast('Enter minutes walked.'); return; } await put('logs', 'walk' + Date.now(), { type: 'walk', date: todayStr(), minutes: v, title: 'Walk — ' + v + ' min', createdAt: new Date().toISOString(), entries: [] }); toast('Walk saved.'); render(); return; }
     if (t.id === 'saveWt') { const v = Number($('#wt').value); if (!v || v < 80 || v > 500) { toast('Enter your weight in lbs.'); return; } await put('body', 'b' + Date.now(), { date: todayStr(), lbs: v }); $('#wt').value = ''; render(); toast('Weight saved.'); return; }
     if (t.id === 'startDeload') { const p = Object.assign({}, profile() || {}); const until = new Date(Date.now() + 6 * 86400000); p.deloadUntil = until.toISOString().slice(0, 10); p.deloads = (p.deloads || []).concat([todayStr()]); await put('plan', 'profile', p); await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: 'Deload week started: about half the sets, same levels, stop with 4+ reps left.' }); render(); return; }
   });
@@ -643,12 +663,16 @@
     $('#pl-cues').innerHTML = ex ? cueList(ex) + (ex.wrong ? '<p class="wrongtxt"><b>Avoid:</b> ' + esc(ex.wrong) + '</p>' : '') : '';
     if (!window.THREE || !demo) { $('#pl-fail').hidden = false; return; }
     $('#pl-fail').hidden = true;
+    if (!player) { const el = $('#pl-cap'); el.textContent = 'Building 3D figure…'; el.hidden = false; el.className = 'cap'; setTimeout(() => buildAndPlay(demo), 60); return; }
+    buildAndPlay(demo);
+  }
+  function buildAndPlay(demo) {
     try {
       if (!player) {
         player = window.DemoEngine.Player($('#pl-canvas'), {
           caption: (c, w, beep) => { const el = $('#pl-cap'); el.textContent = c || ''; el.hidden = !c; el.className = 'cap' + (w ? ' wrong' : '') + (beep ? ' beep' : ''); },
           progress: (u) => { $('#pl-bar').style.width = (u * 100).toFixed(1) + '%'; },
-        }, { style: 'fm' });
+        }, { style: 'fm', res: 0.013 });
       }
       requestAnimationFrame(() => { player.resize(); player.setDemo(demo); player.play(true); player.setSpeed(1); $('#pl-pause').textContent = 'Pause'; $('#pl-slow').classList.remove('on'); player.start(); });
     } catch (e) { $('#pl-fail').hidden = false; }

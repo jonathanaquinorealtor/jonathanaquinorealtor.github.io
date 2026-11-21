@@ -13,7 +13,7 @@
     pts.unshift(new THREE.Vector2(0.001, 0.004));
     pts.push(new THREE.Vector2(0.001, -len - 0.004));
     const g = new THREE.LatheGeometry(pts, seg || 22);
-    return new THREE.Mesh(g, mat);
+    const m = new THREE.Mesh(g, mat); m.userData.lathe = { len, prof }; return m;
   }
   function ball(THREE, r, mat, sx, sy, sz) {
     const m = new THREE.Mesh(new THREE.SphereGeometry(r, 26, 18), mat);
@@ -21,7 +21,7 @@
     return m;
   }
   function node(name, parent, x, y, z, order) {
-    const o = new (T().Object3D)();
+    const o = new (T().Bone)();
     o.name = name; o.position.set(x || 0, y || 0, z || 0);
     if (order) o.rotation.order = order;
     if (parent) parent.add(o);
@@ -142,11 +142,12 @@
     R.root = node('root', fig); R.tilt = node('tilt', R.root); R.spin = node('spin', R.tilt); R.pelvis = node('pelvis', R.spin);
     const P = R.pelvis;
     // trunks body + glutes
-    E(P, shorts, 0, 0.02, 0, 0.178, 0.14, 0.135);
-    E(P, shorts, 0.072, -0.02, -0.06, 0.092, 0.095, 0.085);
-    E(P, shorts, -0.072, -0.02, -0.06, 0.092, 0.095, 0.085);
+    // glutes as skin (the trunks are a smooth skinned layer built later)
+    E(P, skin, 0, 0.02, 0, 0.168, 0.13, 0.125);
+    E(P, skin, 0.072, -0.02, -0.06, 0.088, 0.09, 0.08);
+    E(P, skin, -0.072, -0.02, -0.06, 0.088, 0.09, 0.08);
     const wb = new THREE.Mesh(new THREE.CylinderGeometry(0.168, 0.172, 0.075, 40, 1, true), white);
-    wb.scale.set(1, 1, 0.8); add(P, wb, 0, 0.105, 0);
+    wb.scale.set(1, 1, 0.8); add(P, wb, 0, 0.105, 0).userData.trunk = 1;
     mk('glute', P, 0, -0.02, -0.03, 0.12); mk('pelvisM', P, 0, 0.02, 0, 0.12);
     // torso
     R.abd = node('abd', P, 0, 0.11, 0, 'YXZ');
@@ -195,9 +196,9 @@
       add(hip, lathe(THREE, L.thigh, [[0, 0.1], [0.25, 0.102], [0.6, 0.086], [1, 0.06]], skin, 30));
       E(hip, skin, 0, -0.24, 0.05, 0.072, 0.15, 0.055); E(hip, skin, -sx * 0.04, -0.37, 0.04, 0.045, 0.06, 0.04); E(hip, skin, 0, -0.22, -0.045, 0.066, 0.14, 0.05);
       // satin trunk leg with blue side panel
-      add(hip, lathe(THREE, 0.29, [[0, 0.122], [0.6, 0.136], [1, 0.152]], shorts, 32), 0, 0.03, 0).scale.set(1, 1, 1.08);
+      add(hip, lathe(THREE, 0.29, [[0, 0.122], [0.6, 0.136], [1, 0.152]], shorts, 32), 0, 0.03, 0).userData.trunk = 1;
       const pn = new THREE.LatheGeometry([new THREE.Vector2(0.125, 0), new THREE.Vector2(0.139, -0.17), new THREE.Vector2(0.155, -0.29)], 8, sx > 0 ? Math.PI / 2 - 0.42 : -Math.PI / 2 - 0.42, 0.84);
-      add(hip, new THREE.Mesh(pn, stripe), 0, 0.03, 0).scale.set(1, 1, 1.08);
+      add(hip, new THREE.Mesh(pn, stripe), 0, 0.03, 0).userData.trunk = 1;
       const kn = node('kn' + s, hip, 0, -L.thigh, 0); R['kn' + s] = kn;
       E(kn, skin, 0, 0, 0.006, 0.06, 0.06, 0.06);
       add(kn, lathe(THREE, L.shin, [[0, 0.056], [0.3, 0.058], [0.7, 0.042], [1, 0.036]], skin, 28));
@@ -215,9 +216,172 @@
     return fig;
   }
 
+
+  // ---------- smooth skin: blend the fighter's skin parts into one surface, bind to the skeleton ----------
+  const GROUP = (n) => /L$/.test(n) && /^(sh|el|wr)/.test(n) ? 'armL' : /R$/.test(n) && /^(sh|el|wr)/.test(n) ? 'armR' : /L$/.test(n) && /^(hip|kn|an)/.test(n) ? 'legL' : /R$/.test(n) && /^(hip|kn|an)/.test(n) ? 'legR' : 'torso';
+  function smin(a, b, k) { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; }
+  function smoothSkin(fig, skinMat, res, opt) {
+    opt = opt || {};
+    const THREE = T();
+    const R = fig.userData.R;
+    // bind pose: arms out a little so the armpit doesn't web, legs slightly apart
+    R.root.position.set(0, 0.97, 0);
+    fig.traverse((o) => { if (o.isBone) o.rotation.set(0, 0, 0); });
+    R.shL.rotation.set(0, 0, 38 * D2R); R.shR.rotation.set(0, 0, -38 * D2R);
+    R.hipL.rotation.set(0, 0, 4 * D2R); R.hipR.rotation.set(0, 0, -4 * D2R);
+    fig.updateMatrixWorld(true);
+    const v3 = () => new THREE.Vector3();
+    const prims = fig.userData.skinPrims || []; const remove = [];
+    if (!fig.userData.skinPrims) fig.traverse((m) => {
+      if (!m.isMesh || m.material !== skinMat) return;
+      remove.push(m);
+      const bone = m.parent; const g = GROUP(bone.name);
+      if (m.userData.lathe) {
+        const { len, prof } = m.userData.lathe; const sc = m.scale;
+        for (let i = 0; i < prof.length - 1; i++) {
+          const [t0, r0] = prof[i], [t1, r1] = prof[i + 1];
+          const a = new THREE.Vector3(0, -t0 * len, 0).multiply(sc).add(m.position); const b = new THREE.Vector3(0, -t1 * len, 0).multiply(sc).add(m.position);
+          bone.localToWorld(a); bone.localToWorld(b);
+          const zs = sc.z / sc.x;
+          if (Math.abs(zs - 1) < 0.05) prims.push({ type: 'cone', a, b, r0: r0 * sc.x, r1: r1 * sc.x, bone, g });
+          else { // flattened lathe -> ellipsoids along it
+            for (let k = 0; k <= 3; k++) { const u = k / 3; const c = a.clone().lerp(b, u); const r = (r0 + (r1 - r0) * u) * sc.x; const M = new THREE.Matrix4().copy(bone.matrixWorld); const L = new THREE.Matrix4().makeTranslation(...bone.worldToLocal(c.clone()).toArray()); M.multiply(L); prims.push({ type: 'ell', inv: M.clone().invert(), rad: [r, Math.abs(b.y - a.y) * 0.75 + r * 0.3, r * zs], c, bone, g }); }
+          }
+        }
+      } else {
+        const r = m.geometry.parameters.radius;
+        const M = new THREE.Matrix4().copy(bone.matrixWorld).multiply(new THREE.Matrix4().compose(m.position, m.quaternion, new THREE.Vector3(1, 1, 1)));
+        const c = new THREE.Vector3().setFromMatrixPosition(M);
+        prims.push({ type: 'ell', inv: M.clone().invert(), rad: [r * m.scale.x, r * m.scale.y, r * m.scale.z], c, bone, g });
+      }
+    });
+    remove.forEach((m) => m.parent.remove(m));
+    fig.userData.skinPrims = prims;
+    // bounds + bins
+    const B = 0.06; const lo = v3().set(1e9, 1e9, 1e9), hi = v3().set(-1e9, -1e9, -1e9);
+    for (const p of prims) {
+      let mn, mx;
+      if (p.type === 'cone') { const r = Math.max(p.r0, p.r1); mn = p.a.clone().min(p.b).subScalar(r); mx = p.a.clone().max(p.b).addScalar(r); }
+      else { const r = Math.max(...p.rad); mn = p.c.clone().subScalar(r); mx = p.c.clone().addScalar(r); }
+      p.mn = mn.subScalar(0.04); p.mx = mx.addScalar(0.04); lo.min(p.mn); hi.max(p.mx);
+    }
+    const nb = [Math.ceil((hi.x - lo.x) / B), Math.ceil((hi.y - lo.y) / B), Math.ceil((hi.z - lo.z) / B)];
+    const bins = new Array(nb[0] * nb[1] * nb[2]).fill(null).map(() => []);
+    prims.forEach((p, idx) => {
+      for (let i = Math.floor((p.mn.x - lo.x) / B); i <= Math.floor((p.mx.x - lo.x) / B); i++)
+        for (let j = Math.floor((p.mn.y - lo.y) / B); j <= Math.floor((p.mx.y - lo.y) / B); j++)
+          for (let k = Math.floor((p.mn.z - lo.z) / B); k <= Math.floor((p.mx.z - lo.z) / B); k++)
+            if (i >= 0 && j >= 0 && k >= 0 && i < nb[0] && j < nb[1] && k < nb[2]) bins[(i * nb[1] + j) * nb[2] + k].push(idx);
+    });
+    const tp = v3();
+    function primD(p, x, y, z) {
+      if (p.type === 'cone') { // round cone (iq)
+        const ax = p.a.x, ay = p.a.y, az = p.a.z, bx = p.b.x - ax, by = p.b.y - ay, bz = p.b.z - az;
+        const px = x - ax, py = y - ay, pz = z - az;
+        const l2 = bx * bx + by * by + bz * bz; const t = Math.max(0, Math.min(1, (px * bx + py * by + pz * bz) / l2));
+        const dx = px - bx * t, dy = py - by * t, dz = pz - bz * t;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz) - (p.r0 + (p.r1 - p.r0) * t);
+      }
+      tp.set(x, y, z).applyMatrix4(p.inv);
+      const k0 = Math.hypot(tp.x / p.rad[0], tp.y / p.rad[1], tp.z / p.rad[2]);
+      const k1 = Math.hypot(tp.x / (p.rad[0] * p.rad[0]), tp.y / (p.rad[1] * p.rad[1]), tp.z / (p.rad[2] * p.rad[2]));
+      return k1 > 0 ? k0 * (k0 - 1) / k1 : -Math.min(...p.rad);
+    }
+    const G = { torso: 0, armL: 1, armR: 2, legL: 3, legR: 4 };
+    const gd = new Float64Array(5);
+    function sdf(x, y, z) {
+      const i = Math.floor((x - lo.x) / B), j = Math.floor((y - lo.y) / B), k = Math.floor((z - lo.z) / B);
+      if (i < 0 || j < 0 || k < 0 || i >= nb[0] || j >= nb[1] || k >= nb[2]) return 0.1;
+      const list = bins[(i * nb[1] + j) * nb[2] + k]; if (!list.length) return 0.1;
+      gd.fill(0.1);
+      for (const idx of list) { const p = prims[idx]; const d = primD(p, x, y, z); const gi = G[p.g]; gd[gi] = smin(gd[gi], d, 0.022); }
+      let d = gd[0]; d = smin(d, gd[1], 0.02); d = smin(d, gd[2], 0.02); d = smin(d, gd[3], 0.03); d = smin(d, gd[4], 0.03);
+      if (opt.off) d -= opt.off;
+      if (opt.cut) d = Math.max(d, opt.cut(x, y, z));
+      return d;
+    }
+    const glo = lo.clone(), ghi = hi.clone();
+    if (opt.cut) { glo.max(new THREE.Vector3(-0.36, opt.ylo - 0.03, -0.3)); ghi.min(new THREE.Vector3(0.36, opt.yhi + 0.03, 0.3)); }
+    // naive surface nets
+    const nx = Math.ceil((ghi.x - glo.x) / res) + 1, ny = Math.ceil((ghi.y - glo.y) / res) + 1, nz = Math.ceil((ghi.z - glo.z) / res) + 1;
+    const F = new Float32Array(nx * ny * nz);
+    const id3 = (i, j, k) => (i * ny + j) * nz + k;
+    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) for (let k = 0; k < nz; k++) F[id3(i, j, k)] = sdf(glo.x + i * res, glo.y + j * res, glo.z + k * res);
+    const vid = new Int32Array((nx - 1) * (ny - 1) * (nz - 1)).fill(-1);
+    const cid = (i, j, k) => (i * (ny - 1) + j) * (nz - 1) + k;
+    const pos = [];
+    const E12 = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+    const corner = (c) => [c & 1, (c >> 1) & 1, (c >> 2) & 1];
+    for (let i = 0; i < nx - 1; i++) for (let j = 0; j < ny - 1; j++) for (let k = 0; k < nz - 1; k++) {
+      const v = []; let neg = 0;
+      for (let c = 0; c < 8; c++) { const [a, b, d] = corner(c); const f = F[id3(i + a, j + b, k + d)]; v.push(f); if (f < 0) neg++; }
+      if (neg === 0 || neg === 8) continue;
+      let sx = 0, sy = 0, sz = 0, n = 0;
+      for (const [c0, c1] of E12) {
+        if ((v[c0] < 0) === (v[c1] < 0)) continue;
+        const t = v[c0] / (v[c0] - v[c1]); const p0 = corner(c0), p1 = corner(c1);
+        sx += p0[0] + (p1[0] - p0[0]) * t; sy += p0[1] + (p1[1] - p0[1]) * t; sz += p0[2] + (p1[2] - p0[2]) * t; n++;
+      }
+      vid[cid(i, j, k)] = pos.length / 3;
+      pos.push(glo.x + (i + sx / n) * res, glo.y + (j + sy / n) * res, glo.z + (k + sz / n) * res);
+    }
+    const idx = [];
+    const quad = (a, b, c, d, flip) => { if (a < 0 || b < 0 || c < 0 || d < 0) return; if (flip) idx.push(a, c, b, a, d, c); else idx.push(a, b, c, a, c, d); };
+    for (let i = 1; i < nx - 1; i++) for (let j = 1; j < ny - 1; j++) for (let k = 1; k < nz - 1; k++) {
+      const f0 = F[id3(i, j, k)];
+      // x-edge
+      { const f1 = F[id3(i + 1, j, k)]; if ((f0 < 0) !== (f1 < 0) && i < nx - 1) quad(vid[cid(i, j - 1, k - 1)], vid[cid(i, j, k - 1)], vid[cid(i, j, k)], vid[cid(i, j - 1, k)], f0 < 0); }
+      { const f1 = F[id3(i, j + 1, k)]; if ((f0 < 0) !== (f1 < 0)) quad(vid[cid(i - 1, j, k - 1)], vid[cid(i - 1, j, k)], vid[cid(i, j, k)], vid[cid(i, j, k - 1)], f0 < 0); }
+      { const f1 = F[id3(i, j, k + 1)]; if ((f0 < 0) !== (f1 < 0)) quad(vid[cid(i - 1, j - 1, k)], vid[cid(i, j - 1, k)], vid[cid(i, j, k)], vid[cid(i - 1, j, k)], f0 < 0); }
+    }
+    // normals from the SDF gradient, skin weights from distance to each bone's parts
+    const nv = pos.length / 3; const nrm = new Float32Array(nv * 3); const sIdx = new Uint16Array(nv * 4); const sW = new Float32Array(nv * 4);
+    const bones = []; fig.traverse((o) => { if (o.isBone) bones.push(o); });
+    const bIndex = new Map(bones.map((b, i) => [b, i]));
+    const e = res * 0.5;
+    const bd = new Map();
+    for (let v = 0; v < nv; v++) {
+      const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+      const gx = sdf(x + e, y, z) - sdf(x - e, y, z), gy = sdf(x, y + e, z) - sdf(x, y - e, z), gz = sdf(x, y, z + e) - sdf(x, y, z - e);
+      const gl = Math.hypot(gx, gy, gz) || 1; nrm[v * 3] = gx / gl; nrm[v * 3 + 1] = gy / gl; nrm[v * 3 + 2] = gz / gl;
+      bd.clear();
+      const i = Math.floor((x - lo.x) / B), j = Math.floor((y - lo.y) / B), k = Math.floor((z - lo.z) / B);
+      const list = (i >= 0 && j >= 0 && k >= 0 && i < nb[0] && j < nb[1] && k < nb[2]) ? bins[(i * nb[1] + j) * nb[2] + k] : [];
+      for (const pi of list) { const p = prims[pi]; const d = primD(p, x, y, z); const cur = bd.get(p.bone); if (cur === undefined || d < cur) bd.set(p.bone, d); }
+      const arr = [...bd.entries()].sort((a, b) => a[1] - b[1]).slice(0, 4);
+      if (!arr.length) { sIdx[v * 4] = bIndex.get(R.pelvis); sW[v * 4] = 1; continue; }
+      const d0 = arr[0][1]; let tot = 0; const ws = arr.map(([, d]) => { const w = Math.exp(-(d - d0) / 0.012); tot += w; return w; });
+      arr.forEach(([b], q) => { sIdx[v * 4 + q] = bIndex.get(b); sW[v * 4 + q] = ws[q] / tot; });
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(sIdx, 4));
+    geo.setAttribute('skinWeight', new THREE.BufferAttribute(sW, 4));
+    geo.setIndex(idx);
+    if (opt.color) { const col = new Float32Array(nv * 3); for (let v = 0; v < nv; v++) { const c = opt.color(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]); col[v * 3] = c[0]; col[v * 3 + 1] = c[1]; col[v * 3 + 2] = c[2]; } geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
+    return { geo, bones };
+  }
+  function attachSkin(fig, geo, mat) {
+    const THREE = T();
+    const bones = []; fig.traverse((o) => { if (o.isBone) bones.push(o); });
+    const R = fig.userData.R;
+    R.root.position.set(0, 0.97, 0);
+    fig.traverse((o) => { if (o.isBone) o.rotation.set(0, 0, 0); });
+    R.shL.rotation.set(0, 0, 38 * D2R); R.shR.rotation.set(0, 0, -38 * D2R);
+    R.hipL.rotation.set(0, 0, 4 * D2R); R.hipR.rotation.set(0, 0, -4 * D2R);
+    fig.updateMatrixWorld(true);
+    // remove the per-part skin meshes
+    const rm = []; fig.traverse((m) => { if (m.isMesh && (m.userData.skinPart || m.userData.trunk)) rm.push(m); }); rm.forEach((m) => m.parent.remove(m));
+    const mesh = new THREE.SkinnedMesh(geo, mat); mesh.frustumCulled = false;
+    fig.add(mesh); fig.updateMatrixWorld(true);
+    mesh.bind(new THREE.Skeleton(bones), mesh.matrixWorld);
+    return mesh;
+  }
+
   // ---------- pose math ----------
-  const SYM = ['s', 'a', 't', 'e', 'h', 'b', 'r', 'k', 'f', 'z', 'y'];
-  const BASE_S = { m: 'S', py: 0.955, pz: 0, px: 0, pit: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, zL: 0, zR: 0, xL: 0.12, xR: -0.12, yL: 0, yR: 0, fL: 0, fR: 0, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
+  const SYM = ['s', 'a', 't', 'e', 'h', 'b', 'r', 'k', 'f', 'z', 'y', 'o'];
+  const BASE_S = { m: 'S', py: 0.955, pz: 0, px: 0, pit: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, zL: 0, zR: 0, xL: 0.12, xR: -0.12, yL: 0, yR: 0, fL: 0, fR: 0, oL: 8, oR: 8, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
   const BASE_F = { m: 'F', pit: 0, spin: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, hL: 0, hR: 0, bL: 0, bR: 0, rL: 0, rR: 0, kL: 0, kR: 0, fL: 0, fR: 0, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
 
   function expand(fr, mode) {
@@ -311,32 +475,40 @@
     if (p.m === 'S') {
       R.root.position.set(p.px, p.py, p.pz);
       fig.updateMatrixWorld(true);
-      const inv = new THREE.Matrix4();
+      // two-bone leg IK with the knee aimed over the toes (pole = foot direction), exact foot pitch + toe-out
+      const figQ = new THREE.Quaternion(); fig.getWorldQuaternion(figQ);
+      const up = new THREE.Vector3(0, 1, 0);
       for (const s of ['L', 'R']) {
-        const hip = R['hip' + s];
-        // target ankle in fig space -> pelvis space
-        const fdeg = p['f' + s];
-        const ay = 0.07 + 0.16 * Math.sin(Math.max(0, fdeg) * D2R) + p['y' + s];
-        const tgt = new THREE.Vector3(p['x' + s], ay, p['z' + s]);
-        fig.localToWorld(tgt);
-        inv.copy(R.pelvis.matrixWorld).invert();
-        tgt.applyMatrix4(inv);
-        tgt.sub(hip.position);
-        const x = tgt.x, y = tgt.y, z = tgt.z;
-        const b = Math.atan2(x, -y);
-        const dyE = Math.sqrt(x * x + y * y);
-        let d = Math.sqrt(dyE * dyE + z * z);
-        d = Math.min(d, L.thigh + L.shin - 1e-4);
-        const phi = Math.atan2(z, dyE); // angle forward (we use rotation.x = -angle)
-        const al = Math.acos(Math.min(1, Math.max(-1, (L.thigh * L.thigh + d * d - L.shin * L.shin) / (2 * L.thigh * d))));
-        const be = Math.acos(Math.min(1, Math.max(-1, (L.shin * L.shin + d * d - L.thigh * L.thigh) / (2 * L.shin * d))));
-        // rotation.x = θ gives direction z=-sinθ -> forward needs negative θ
-        const thighX = -(phi + al);
-        const kneeX = al + be;
-        hip.rotation.set(thighX, 0, b);
-        R['kn' + s].rotation.set(kneeX, 0, 0);
-        const footWorld = fdeg * D2R; // desired foot pitch relative to fig
-        R['an' + s].rotation.set(footWorld - (p.pit * D2R + thighX + kneeX), 0, 0);
+        const sd = s === 'L' ? 1 : -1;
+        const hip = R['hip' + s], kn = R['kn' + s], an = R['an' + s];
+        const fdeg = p['f' + s], o = (p['o' + s] || 0) * D2R;
+        const A = new THREE.Vector3(p['x' + s], 0.07 + 0.16 * Math.sin(Math.max(0, fdeg) * D2R) + p['y' + s], p['z' + s]);
+        const H = new THREE.Vector3(); hip.getWorldPosition(H); fig.worldToLocal(H);
+        const fwdH = new THREE.Vector3(Math.sin(o) * sd, 0, Math.cos(o));
+        const d = A.clone().sub(H); let dist = d.length(); const dn = d.clone().normalize();
+        dist = Math.max(0.05, Math.min(dist, L.thigh + L.shin - 1e-4));
+        const a = (L.thigh * L.thigh + dist * dist - L.shin * L.shin) / (2 * dist);
+        const hgt = Math.sqrt(Math.max(L.thigh * L.thigh - a * a, 0));
+        const pp = fwdH.clone().sub(dn.clone().multiplyScalar(fwdH.dot(dn))); if (pp.lengthSq() < 1e-8) pp.set(0, 0, 1); pp.normalize();
+        const K = H.clone().add(dn.clone().multiplyScalar(a)).add(pp.clone().multiplyScalar(hgt));
+        const Ap = H.clone().add(dn.clone().multiplyScalar(dist));
+        const td = K.clone().sub(H).normalize(), sdv = Ap.clone().sub(K).normalize();
+        const yA = td.clone().negate();
+        const zA = pp.clone().sub(td.clone().multiplyScalar(pp.dot(td))).normalize();
+        const xA = new THREE.Vector3().crossVectors(yA, zA).normalize();
+        const qT = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xA, yA, zA));
+        const qPar = new THREE.Quaternion(); hip.parent.getWorldQuaternion(qPar);
+        hip.quaternion.copy(qPar.invert().multiply(figQ.clone().multiply(qT)));
+        kn.rotation.set(Math.acos(Math.max(-1, Math.min(1, td.dot(sdv)))), 0, 0);
+        hip.updateMatrixWorld(true);
+        // foot: forward = toe direction, pitched down by plantar flexion
+        const fr = fdeg * D2R;
+        const zF = fwdH.clone().multiplyScalar(Math.cos(fr)).add(up.clone().multiplyScalar(-Math.sin(fr)));
+        const yF = up.clone().multiplyScalar(Math.cos(fr)).add(fwdH.clone().multiplyScalar(Math.sin(fr)));
+        const xF = new THREE.Vector3().crossVectors(yF, zF).normalize();
+        const qF = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xF, yF, zF));
+        const qK = new THREE.Quaternion(); kn.getWorldQuaternion(qK);
+        an.quaternion.copy(qK.invert().multiply(figQ.clone().multiply(qF)));
       }
       fig.updateMatrixWorld(true);
       groundFig(fig, ctx && ctx.groundY);
@@ -444,7 +616,7 @@
     scene.fog = new THREE.Fog(new THREE.Color(0x050c16).convertSRGBToLinear(), 5, 13);
     const camera = new THREE.PerspectiveCamera(36, 1, 0.05, 50);
 
-    scene.add(new THREE.HemisphereLight(0x8fb4e8, 0x05070a, 0.55));
+    const hemi = new THREE.HemisphereLight(0x8fb4e8, 0x05070a, 0.55); scene.add(hemi);
     const key = new THREE.DirectionalLight(0xffffff, 1.35); key.position.set(2.2, 4, 3); scene.add(key);
     const rimA = new THREE.DirectionalLight(0x2f86ff, 2.2); rimA.position.set(-3, 2.5, -3); scene.add(rimA);
     const rimB = new THREE.DirectionalLight(0x3aa0ff, 1.6); rimB.position.set(3, 1.5, -3.5); scene.add(rimB);
@@ -488,18 +660,39 @@
       : { skin: mk(0x3a414c, 0.38, 0.42), shorts: mk(0x0b0d11, 0.75, 0.1), band: mk(0x1f6dff, 0.35, 0.2, { emissive: 0x0b2a70, emissiveIntensity: 0.9 }), white: mk(0xe9eef5, 0.5, 0.05), stripe: mk(0x2a7bff, 0.4, 0.1, { emissive: 0x0b2a70, emissiveIntensity: 0.7 }) };
     const dim = (m) => { const c = m.clone(); c.color.multiplyScalar(0.45); if (c.emissive) c.emissive.multiplyScalar(0.5); return c; };
 
-    if (fm) Object.assign(matsTop, { skin: phys(0x3b3e44, 0.55, 0.08, 0.15), shorts: phys(0x101115, 0.2, 0.35, 0.8), white: phys(0xe4e7ec, 0.45, 0.05, 0.2), stripe: phys(0x1e5bff, 0.25, 0.2, 0.6, { emissive: 0x0a2a90, emissiveIntensity: 0.7 }), band: phys(0x1f5cff, 0.3, 0.1, 0.4, { emissive: 0x0b2a90, emissiveIntensity: 0.9 }), boot: phys(0x0c0d10, 0.25, 0.3, 0.9), sole: phys(0x2b6bff, 0.3, 0.1, 0.4, { emissive: 0x1840b0, emissiveIntensity: 1.0 }) });
+    if (fm) Object.assign(matsTop, { skin: phys(0x1d1f23, 0.45, 0.08, 0.35), shorts: phys(0x101115, 0.2, 0.35, 0.8), white: phys(0xe4e7ec, 0.45, 0.05, 0.2), stripe: phys(0x1e5bff, 0.25, 0.2, 0.6, { emissive: 0x0a2a90, emissiveIntensity: 0.7 }), band: phys(0x1f5cff, 0.3, 0.1, 0.4, { emissive: 0x0b2a90, emissiveIntensity: 0.9 }), boot: phys(0x0c0d10, 0.25, 0.3, 0.9), sole: phys(0x2b6bff, 0.3, 0.1, 0.4, { emissive: 0x1840b0, emissiveIntensity: 1.0 }) });
     const build = fm ? buildFighter : buildFigure;
     const fig = build(matsTop); scene.add(fig);
+    let skinGeo = null, trunkGeo = null, trunkMat = null;
+    if (fm) {
+      const skinMat = matsTop.skin; skinMat.skinning = true;
+      const out = smoothSkin(fig, skinMat, opts.res || 0.011); skinGeo = out.geo;
+      attachSkin(fig, skinGeo, skinMat);
+      // satin trunks: the body surface pushed out a little, cut to waist..mid-thigh, bends with the hips
+      const lin3 = (h) => { const c = lin(h); return [c.r, c.g, c.b]; };
+      const BLK = lin3(0x050506), BLU = lin3(0x1d55ff), WHT = lin3(0xf2f4f8);
+      const ylo = 0.62, yhi = 1.1;
+      trunkGeo = smoothSkin(fig, skinMat, opts.res || 0.011, {
+        off: 0.016, ylo, yhi,
+        cut: (x, y, z) => Math.max(ylo - y, y - yhi, Math.abs(x) - 0.3),
+        color: (x, y, z) => y > 1.02 ? WHT : (y < 0.96 && Math.abs(x) > 0.15 && Math.abs(z) < 0.05) ? BLU : BLK,
+      }).geo;
+      trunkMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.3, metalness: 0.1, clearcoat: 0.9, clearcoatRoughness: 0.3, skinning: true });
+      attachSkin(fig, trunkGeo, trunkMat);
+    }
     if (grey) fig.traverse((o) => { if (o.userData.detail) o.visible = false; });
     const mirWrap = new THREE.Group(); mirWrap.scale.y = -1; scene.add(mirWrap);
     const matsMir = {}; for (const k in matsTop) matsMir[k] = dim(matsTop[k]);
     const mir = build(matsMir); mirWrap.add(mir);
+    if (fm) { const mm = matsMir.skin; mm.skinning = true; mir.traverse((m) => { if (m.isMesh && m.material === mm) m.userData.skinPart = 1; }); attachSkin(mir, skinGeo, mm); const tm = trunkMat.clone(); tm.color.setScalar(0.45); tm.skinning = true; attachSkin(mir, trunkGeo, tm); }
     if (grey) mir.traverse((o) => { if (o.userData.detail) o.visible = false; });
     if (opts.noMat) mat.visible = false;
     if (fm) {
       glow.visible = false; halo.visible = false;
-      floor.material.opacity = 0.74; floor.material.roughness = 0.75; floor.material.metalness = 0.0; floor.material.color = lin(0x02040a); key.position.set(-1.5, 4.5, 2.2);
+      hemi.intensity = 0.18; key.intensity = 2.0; key.position.set(1.8, 3.5, 3.2);
+      rimA.intensity = 3.2; rimB.intensity = 2.6; fill.intensity = 0.25;
+      const kick = new THREE.DirectionalLight(0xffffff, 0.9); kick.position.set(-3, 1.5, 1.5); scene.add(kick);
+      floor.material = new THREE.MeshBasicMaterial({ color: lin(0x03070f), transparent: true, opacity: 0.78 }); key.position.set(-1.5, 4.5, 2.2);
       floor.material.color = lin(0x050a14);
       scene.background = gradTex(THREE, 512, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#02050c'); gr.addColorStop(0.55, '#071a3a'); gr.addColorStop(1, '#02050c'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
       const flame = gradTex(THREE, 1024, 512, (g, w, h) => {
@@ -516,11 +709,11 @@
       });
       flame.wrapS = THREE.RepeatWrapping; flame.repeat.set(3, 1);
       const back = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 8, 64, 1, true), new THREE.MeshBasicMaterial({ map: flame, transparent: true, depthWrite: false, fog: false, side: THREE.BackSide }));
-      back.position.set(0, 3.95, 0); scene.add(back);
+      back.position.set(0, 4.0, 0); scene.add(back);
       const horizon = new THREE.Mesh(new THREE.CylinderGeometry(5.98, 5.98, 0.03, 96, 1, true), new THREE.MeshBasicMaterial({ color: 0x5aa8ff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, fog: false, side: THREE.BackSide }));
       horizon.position.set(0, 0.02, 0); scene.add(horizon);
-      const hglow = new THREE.Mesh(new THREE.CylinderGeometry(5.95, 5.95, 1.2, 96, 1, true), new THREE.MeshBasicMaterial({ map: gradTex(THREE, 16, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(40,120,255,0)'); gr.addColorStop(0.5, 'rgba(60,140,255,0.55)'); gr.addColorStop(1, 'rgba(40,120,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
-      hglow.material.side = THREE.BackSide; hglow.position.set(0, 0.02, 0); scene.add(hglow);
+      const hglow = new THREE.Mesh(new THREE.CylinderGeometry(5.95, 5.95, 1.2, 96, 1, true), new THREE.MeshBasicMaterial({ map: gradTex(THREE, 16, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(40,120,255,0)'); gr.addColorStop(1, 'rgba(60,140,255,0.6)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+      hglow.material.side = THREE.BackSide; hglow.position.set(0, 0.61, 0); scene.add(hglow);
       smokes.forEach((sp) => { sp.material.opacity = 0.35; });
       scene.fog.near = 7; scene.fog.far = 16;
     }
@@ -640,7 +833,7 @@
     canvas.addEventListener('pointercancel', () => { drag = null; });
 
     return {
-      setDemo, resize,
+      setDemo, resize, scene,
       start() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); } },
       stop() { cancelAnimationFrame(raf); raf = 0; },
       play(v) { playing = v; }, isPlaying: () => playing,

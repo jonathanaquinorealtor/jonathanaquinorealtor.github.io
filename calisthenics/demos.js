@@ -11,9 +11,9 @@
 
   const FSOL = { a: 'elbowL', b: ['kneeR', 'toeL'], p: 'pit', lo: 0, hi: 140 };
   const squat = (depth, down, extra) => ({
-    cam: [58, 8, 3.5, 0.78],
+    cam: [38, 8, 3.5, 0.78],
     f: [
-      { x: 0.16, h: 1, c: 'FEET SHOULDER-WIDTH · TALL' },
+      { x: 0.21, o: 20, h: 1, c: 'FEET SHOULDER-WIDTH · TOES OUT' },
       { d: down, py: depth.py, pz: depth.pz, pit: depth.pit, s: depth.s, a: 6, e: 4, c: depth.cap || 'HIPS BACK · ' + down + ' SEC DOWN' },
       { h: depth.pause || 1, c: 'PAUSE · BACK FLAT · KNEES OVER TOES' },
       { d: depth.up || 1.1, ease: depth.upEase || 'ease', py: 0.955, pz: 0, pit: 0, s: 0, a: 7, e: 10, c: depth.upCap || 'STAND · PUSH THROUGH WHOLE FOOT', h: 0.7 },
@@ -171,13 +171,14 @@
 
   // ---------------- LEGS ----------------
   D.partialSquat = squat({ py: 0.77, pz: -0.08, pit: 20, s: 48, pause: 0.6 }, 2);
-  D.bwSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: 'HIPS BACK · 3 SEC DOWN' }, 3, squatWrong);
+  D.bwSquat = squat({ py: 0.56, pz: -0.15, pit: 38, s: 85, cap: 'HIPS BACK · KNEES OVER TOES' }, 3, squatWrong);
+  D.bwSquat.f[1].nk = -14; D.bwSquat.f[3].nk = 0;
   D.tempoSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: '3 SEC DOWN', pause: 1, up: 1 }, 3);
   D.fastSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: 'DOWN SLOW · 3 SEC', pause: 0.4, up: 0.32, upEase: 'fast', upCap: 'STAND EXPLOSIVE!' }, 3, [{ h: 1.4, c: 'FEET STAY DOWN · REST 10 SEC' }]);
   D.beepSquat = {
-    cam: [58, 8, 3.5, 0.78],
+    cam: [38, 8, 3.5, 0.78],
     f: [
-      { x: 0.16, s: 20, e: 30, h: 1.4, c: 'READY · WAIT FOR THE BEEP…' },
+      { x: 0.21, o: 20, s: 20, e: 30, h: 1.4, c: 'READY · WAIT FOR THE BEEP…' },
       { d: 0.35, ease: 'fast', py: 0.64, pz: -0.12, pit: 32, s: 75, e: 5, c: 'BEEP! SQUAT', beep: 1 },
       { d: 0.35, ease: 'fast', py: 0.955, pz: 0, pit: 0, s: 20, e: 30, c: 'STAND FAST', h: 1.2 },
       { h: 0.6, c: 'RANDOM TIMING BEATS A RHYTHM' },
@@ -187,7 +188,7 @@
   D.halfSquatHold.f[2].c = 'HOLD 30–45 SEC · HARD EFFORT';
   D.halfSquatHold.f[3].c = 'STAND · REST 2 MIN';
 
-  const SPLIT = { zL: 0.38, zR: -0.4, fR: 48, xL: 0.11, xR: -0.11 };
+  const SPLIT = { zL: 0.38, zR: -0.42, fR: 50, xL: 0.11, xR: -0.11, oL: 6, oR: 0 };
   D.splitSquat = {
     cam: [84, 8, 3.6, 0.7],
     f: [
@@ -211,7 +212,7 @@
   const lunge = (fast) => ({
     cam: [84, 8, 3.6, 0.7],
     f: [
-      Object.assign({ xL: 0.1, xR: -0.1 }, HIPS, { h: 0.8, c: 'STAND TALL · FEET HIP-WIDTH' }),
+      Object.assign({ xL: 0.1, xR: -0.1, o: 6 }, HIPS, { h: 0.8, c: 'STAND TALL · FEET HIP-WIDTH' }),
       { d: 0.7, zR: -0.22, yR: 0.12, pz: -0.06, c: 'STEP BACK — NOT FORWARD' },
       { d: 0.6, zR: -0.5, yR: 0, fR: 46, pz: -0.19, py: 0.92 },
       { d: fast ? 1.6 : 2, py: 0.52, pit: 4, c: fast ? 'LOWER SLOW' : 'LOWER · FRONT SHIN UPRIGHT' },
@@ -236,7 +237,7 @@
   D.calfHold = {
     cam: [70, 6, 3.4, 0.7],
     f: [
-      { x: 0.11, h: 0.8, c: 'FEET HIP-WIDTH · FINGERTIP ON WALL OK' },
+      { x: 0.11, o: 4, h: 0.8, c: 'FEET HIP-WIDTH · FINGERTIP ON WALL OK' },
       { d: 1.5, f: 38, c: 'RISE HIGH ON THE BIG TOES' },
       { h: 3.2, c: 'HOLD 30–45 SEC AT THE TOP' },
       { d: 3, f: 0, c: 'LOWER · 3 SEC' },
@@ -245,7 +246,7 @@
   D.heelSnap = {
     cam: [70, 6, 3.4, 0.7],
     f: [
-      { x: 0.11, h: 0.8, c: 'TALL · FEET HIP-WIDTH' },
+      { x: 0.11, o: 4, h: 0.8, c: 'TALL · FEET HIP-WIDTH' },
       { d: 0.22, ease: 'fast', f: 38, c: 'RISE FAST!' },
       { h: 0.4, c: 'FEET NEVER LEAVE THE FLOOR' },
       { d: 3, f: 0, c: 'LOWER · 3 SEC' },
@@ -254,9 +255,9 @@
   D.snapDown = {
     cam: [62, 8, 3.6, 0.8],
     f: [
-      { x: 0.15, h: 0.6, c: 'STAND TALL' },
+      { x: 0.2, o: 15, h: 0.6, c: 'STAND TALL · FEET HIP-TO-SHOULDER WIDTH' },
       { d: 0.8, f: 30, s: 168, a: 12, e: 5, c: 'RISE TALL · ARMS UP' },
-      { d: 0.3, ease: 'fast', f: 0, py: 0.73, pz: -0.11, pit: 30, s: -32, a: 10, e: 15, c: 'SNAP DOWN!' },
+      { d: 0.3, ease: 'fast', f: 0, py: 0.72, pz: -0.12, pit: 32, nk: -12, s: -32, a: 10, e: 15, c: 'SNAP DOWN!' },
       { h: 2, c: 'FREEZE 2 SEC · LANDING SHAPE' },
       { d: 1, py: 0.955, pz: 0, pit: 0, s: 0, a: 7, e: 10, c: 'FEET NEVER LEAVE THE FLOOR', h: 0.4 },
     ],
@@ -272,6 +273,26 @@
       { d: 1.5, h: 58, k: 105, c: 'LOWER SLOW' },
       { d: 1.2, h: -14, k: 82, sp: -24, w: 1, c: '✗ OVER-ARCHING — LOW BACK TAKES OVER' },
       { d: 1.2, h: 58, k: 105, sp: 0, c: 'FEEL: GLUTES + HAMSTRINGS, NOT LOW BACK' },
+    ],
+  };
+  D.kickstandBridge = {
+    cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
+    f: [
+      Object.assign({}, SUPINE_BENT, { hR: 6, kR: 12, sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 }, hh: 0.8, c: 'WORKING FOOT FLAT · HELPER HEEL OUT' }),
+      { d: 1.2, hL: 4, kL: 88, hR: -28, kR: 6, c: 'DRIVE THROUGH THE WORKING HEEL' },
+      { hh: 1.2, c: 'HOLD 2 SEC · HIPS LEVEL' },
+      { d: 1.6, hL: 58, kL: 105, hR: 6, kR: 12, c: 'LOWER SLOW · HELPER FOOT JUST BALANCES' },
+    ],
+  };
+  D.singleLegBridge = {
+    cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
+    f: [
+      Object.assign({}, SUPINE_BENT, { hR: 40, kR: 4, sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 }, hh: 0.8, c: 'ONE FOOT DOWN · OTHER LEG LONG' }),
+      { d: 1.2, hL: 4, kL: 88, hR: 4, kR: 2, c: 'HIPS UP · LEG IN LINE WITH THIGH' },
+      { hh: 1.4, c: 'HOLD 2 SEC · NO ARCH' },
+      { d: 2, hL: 58, kL: 105, hR: 40, kR: 4, c: 'LOWER SLOW' },
+      { d: 1.2, hL: 4, kL: 88, hR: -14, kR: 2, sp: -18, w: 1, c: '✗ HIPS TWIST + LOW BACK ARCHES' },
+      { d: 1.2, hL: 58, kL: 105, hR: 40, kR: 4, sp: 0, c: 'KEEP BOTH HIPS LEVEL' },
     ],
   };
   D.bridgeHold = {
@@ -332,7 +353,7 @@
     cam: [82, 8, 3.4, 0.85],
     props: [{ type: 'wall', at: 'glute', frame: 2, side: -1, face: -1, dz: 0.02 }],
     f: [
-      { x: 0.13, s: 42, a: -12, e: 128, h: 0.8, c: 'WALL ONE FOOT BEHIND YOU' },
+      { x: 0.13, o: 10, s: 42, a: -12, e: 128, h: 0.8, c: 'WALL ONE FOOT BEHIND YOU · SOFT KNEES' },
       { d: 2, pit: 52, pz: -0.16, py: 0.9, c: 'PUSH HIPS BACK · FLAT BACK' },
       { h: 0.6, c: 'LIGHT BUTT TAP ON THE WALL' },
       { d: 1.2, pit: 0, pz: 0, py: 0.955, c: 'SQUEEZE GLUTES TO STAND', h: 0.6 },
@@ -492,7 +513,7 @@
   };
 
   // ---------------- REACTION / FOOTWORK ----------------
-  const STANCE = Object.assign({ py: 0.9, pit: 8, zL: 0.17, zR: -0.17, xL: 0.13, xR: -0.13, fR: 14, yaw: 0 }, GUARD);
+  const STANCE = Object.assign({ py: 0.9, pit: 8, zL: 0.17, zR: -0.17, xL: 0.13, xR: -0.13, fR: 14, oL: 20, oR: 45, yaw: 0 }, GUARD);
   D.pointStep = {
     cam: [20, 10, 3.8, 0.8],
     f: [

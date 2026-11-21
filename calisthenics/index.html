@@ -178,6 +178,9 @@ td { color: var(--muted); }
 .entries q { display: block; width: 100%; color: var(--muted); font-size: 14px; font-style: italic; quotes: "“" "”"; }
 .why li { margin-bottom: 8px; }
 .why a { color: var(--teal); }
+.blockhead { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 22px 0 -4px; color: var(--muted); font-size: 15px; }
+.blockhead b { font: 700 18px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--teal); }
+.walk { border-color: var(--teal-2); }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--teal); color: var(--teal-ink); font-weight: 700; padding: 12px 18px; border-radius: 12px; z-index: 50; max-width: calc(100% - 32px); }
 /* player */
 #player { position: fixed; inset: 0; z-index: 40; background: rgba(0, 3, 8, 0.92); display: grid; place-items: center; padding: calc(10px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
@@ -240,7 +243,7 @@ td { color: var(--muted); }
     pts.unshift(new THREE.Vector2(0.001, 0.004));
     pts.push(new THREE.Vector2(0.001, -len - 0.004));
     const g = new THREE.LatheGeometry(pts, seg || 22);
-    return new THREE.Mesh(g, mat);
+    const m = new THREE.Mesh(g, mat); m.userData.lathe = { len, prof }; return m;
   }
   function ball(THREE, r, mat, sx, sy, sz) {
     const m = new THREE.Mesh(new THREE.SphereGeometry(r, 26, 18), mat);
@@ -248,7 +251,7 @@ td { color: var(--muted); }
     return m;
   }
   function node(name, parent, x, y, z, order) {
-    const o = new (T().Object3D)();
+    const o = new (T().Bone)();
     o.name = name; o.position.set(x || 0, y || 0, z || 0);
     if (order) o.rotation.order = order;
     if (parent) parent.add(o);
@@ -369,11 +372,12 @@ td { color: var(--muted); }
     R.root = node('root', fig); R.tilt = node('tilt', R.root); R.spin = node('spin', R.tilt); R.pelvis = node('pelvis', R.spin);
     const P = R.pelvis;
     // trunks body + glutes
-    E(P, shorts, 0, 0.02, 0, 0.178, 0.14, 0.135);
-    E(P, shorts, 0.072, -0.02, -0.06, 0.092, 0.095, 0.085);
-    E(P, shorts, -0.072, -0.02, -0.06, 0.092, 0.095, 0.085);
+    // glutes as skin (the trunks are a smooth skinned layer built later)
+    E(P, skin, 0, 0.02, 0, 0.168, 0.13, 0.125);
+    E(P, skin, 0.072, -0.02, -0.06, 0.088, 0.09, 0.08);
+    E(P, skin, -0.072, -0.02, -0.06, 0.088, 0.09, 0.08);
     const wb = new THREE.Mesh(new THREE.CylinderGeometry(0.168, 0.172, 0.075, 40, 1, true), white);
-    wb.scale.set(1, 1, 0.8); add(P, wb, 0, 0.105, 0);
+    wb.scale.set(1, 1, 0.8); add(P, wb, 0, 0.105, 0).userData.trunk = 1;
     mk('glute', P, 0, -0.02, -0.03, 0.12); mk('pelvisM', P, 0, 0.02, 0, 0.12);
     // torso
     R.abd = node('abd', P, 0, 0.11, 0, 'YXZ');
@@ -422,9 +426,9 @@ td { color: var(--muted); }
       add(hip, lathe(THREE, L.thigh, [[0, 0.1], [0.25, 0.102], [0.6, 0.086], [1, 0.06]], skin, 30));
       E(hip, skin, 0, -0.24, 0.05, 0.072, 0.15, 0.055); E(hip, skin, -sx * 0.04, -0.37, 0.04, 0.045, 0.06, 0.04); E(hip, skin, 0, -0.22, -0.045, 0.066, 0.14, 0.05);
       // satin trunk leg with blue side panel
-      add(hip, lathe(THREE, 0.29, [[0, 0.122], [0.6, 0.136], [1, 0.152]], shorts, 32), 0, 0.03, 0).scale.set(1, 1, 1.08);
+      add(hip, lathe(THREE, 0.29, [[0, 0.122], [0.6, 0.136], [1, 0.152]], shorts, 32), 0, 0.03, 0).userData.trunk = 1;
       const pn = new THREE.LatheGeometry([new THREE.Vector2(0.125, 0), new THREE.Vector2(0.139, -0.17), new THREE.Vector2(0.155, -0.29)], 8, sx > 0 ? Math.PI / 2 - 0.42 : -Math.PI / 2 - 0.42, 0.84);
-      add(hip, new THREE.Mesh(pn, stripe), 0, 0.03, 0).scale.set(1, 1, 1.08);
+      add(hip, new THREE.Mesh(pn, stripe), 0, 0.03, 0).userData.trunk = 1;
       const kn = node('kn' + s, hip, 0, -L.thigh, 0); R['kn' + s] = kn;
       E(kn, skin, 0, 0, 0.006, 0.06, 0.06, 0.06);
       add(kn, lathe(THREE, L.shin, [[0, 0.056], [0.3, 0.058], [0.7, 0.042], [1, 0.036]], skin, 28));
@@ -442,9 +446,172 @@ td { color: var(--muted); }
     return fig;
   }
 
+
+  // ---------- smooth skin: blend the fighter's skin parts into one surface, bind to the skeleton ----------
+  const GROUP = (n) => /L$/.test(n) && /^(sh|el|wr)/.test(n) ? 'armL' : /R$/.test(n) && /^(sh|el|wr)/.test(n) ? 'armR' : /L$/.test(n) && /^(hip|kn|an)/.test(n) ? 'legL' : /R$/.test(n) && /^(hip|kn|an)/.test(n) ? 'legR' : 'torso';
+  function smin(a, b, k) { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; }
+  function smoothSkin(fig, skinMat, res, opt) {
+    opt = opt || {};
+    const THREE = T();
+    const R = fig.userData.R;
+    // bind pose: arms out a little so the armpit doesn't web, legs slightly apart
+    R.root.position.set(0, 0.97, 0);
+    fig.traverse((o) => { if (o.isBone) o.rotation.set(0, 0, 0); });
+    R.shL.rotation.set(0, 0, 38 * D2R); R.shR.rotation.set(0, 0, -38 * D2R);
+    R.hipL.rotation.set(0, 0, 4 * D2R); R.hipR.rotation.set(0, 0, -4 * D2R);
+    fig.updateMatrixWorld(true);
+    const v3 = () => new THREE.Vector3();
+    const prims = fig.userData.skinPrims || []; const remove = [];
+    if (!fig.userData.skinPrims) fig.traverse((m) => {
+      if (!m.isMesh || m.material !== skinMat) return;
+      remove.push(m);
+      const bone = m.parent; const g = GROUP(bone.name);
+      if (m.userData.lathe) {
+        const { len, prof } = m.userData.lathe; const sc = m.scale;
+        for (let i = 0; i < prof.length - 1; i++) {
+          const [t0, r0] = prof[i], [t1, r1] = prof[i + 1];
+          const a = new THREE.Vector3(0, -t0 * len, 0).multiply(sc).add(m.position); const b = new THREE.Vector3(0, -t1 * len, 0).multiply(sc).add(m.position);
+          bone.localToWorld(a); bone.localToWorld(b);
+          const zs = sc.z / sc.x;
+          if (Math.abs(zs - 1) < 0.05) prims.push({ type: 'cone', a, b, r0: r0 * sc.x, r1: r1 * sc.x, bone, g });
+          else { // flattened lathe -> ellipsoids along it
+            for (let k = 0; k <= 3; k++) { const u = k / 3; const c = a.clone().lerp(b, u); const r = (r0 + (r1 - r0) * u) * sc.x; const M = new THREE.Matrix4().copy(bone.matrixWorld); const L = new THREE.Matrix4().makeTranslation(...bone.worldToLocal(c.clone()).toArray()); M.multiply(L); prims.push({ type: 'ell', inv: M.clone().invert(), rad: [r, Math.abs(b.y - a.y) * 0.75 + r * 0.3, r * zs], c, bone, g }); }
+          }
+        }
+      } else {
+        const r = m.geometry.parameters.radius;
+        const M = new THREE.Matrix4().copy(bone.matrixWorld).multiply(new THREE.Matrix4().compose(m.position, m.quaternion, new THREE.Vector3(1, 1, 1)));
+        const c = new THREE.Vector3().setFromMatrixPosition(M);
+        prims.push({ type: 'ell', inv: M.clone().invert(), rad: [r * m.scale.x, r * m.scale.y, r * m.scale.z], c, bone, g });
+      }
+    });
+    remove.forEach((m) => m.parent.remove(m));
+    fig.userData.skinPrims = prims;
+    // bounds + bins
+    const B = 0.06; const lo = v3().set(1e9, 1e9, 1e9), hi = v3().set(-1e9, -1e9, -1e9);
+    for (const p of prims) {
+      let mn, mx;
+      if (p.type === 'cone') { const r = Math.max(p.r0, p.r1); mn = p.a.clone().min(p.b).subScalar(r); mx = p.a.clone().max(p.b).addScalar(r); }
+      else { const r = Math.max(...p.rad); mn = p.c.clone().subScalar(r); mx = p.c.clone().addScalar(r); }
+      p.mn = mn.subScalar(0.04); p.mx = mx.addScalar(0.04); lo.min(p.mn); hi.max(p.mx);
+    }
+    const nb = [Math.ceil((hi.x - lo.x) / B), Math.ceil((hi.y - lo.y) / B), Math.ceil((hi.z - lo.z) / B)];
+    const bins = new Array(nb[0] * nb[1] * nb[2]).fill(null).map(() => []);
+    prims.forEach((p, idx) => {
+      for (let i = Math.floor((p.mn.x - lo.x) / B); i <= Math.floor((p.mx.x - lo.x) / B); i++)
+        for (let j = Math.floor((p.mn.y - lo.y) / B); j <= Math.floor((p.mx.y - lo.y) / B); j++)
+          for (let k = Math.floor((p.mn.z - lo.z) / B); k <= Math.floor((p.mx.z - lo.z) / B); k++)
+            if (i >= 0 && j >= 0 && k >= 0 && i < nb[0] && j < nb[1] && k < nb[2]) bins[(i * nb[1] + j) * nb[2] + k].push(idx);
+    });
+    const tp = v3();
+    function primD(p, x, y, z) {
+      if (p.type === 'cone') { // round cone (iq)
+        const ax = p.a.x, ay = p.a.y, az = p.a.z, bx = p.b.x - ax, by = p.b.y - ay, bz = p.b.z - az;
+        const px = x - ax, py = y - ay, pz = z - az;
+        const l2 = bx * bx + by * by + bz * bz; const t = Math.max(0, Math.min(1, (px * bx + py * by + pz * bz) / l2));
+        const dx = px - bx * t, dy = py - by * t, dz = pz - bz * t;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz) - (p.r0 + (p.r1 - p.r0) * t);
+      }
+      tp.set(x, y, z).applyMatrix4(p.inv);
+      const k0 = Math.hypot(tp.x / p.rad[0], tp.y / p.rad[1], tp.z / p.rad[2]);
+      const k1 = Math.hypot(tp.x / (p.rad[0] * p.rad[0]), tp.y / (p.rad[1] * p.rad[1]), tp.z / (p.rad[2] * p.rad[2]));
+      return k1 > 0 ? k0 * (k0 - 1) / k1 : -Math.min(...p.rad);
+    }
+    const G = { torso: 0, armL: 1, armR: 2, legL: 3, legR: 4 };
+    const gd = new Float64Array(5);
+    function sdf(x, y, z) {
+      const i = Math.floor((x - lo.x) / B), j = Math.floor((y - lo.y) / B), k = Math.floor((z - lo.z) / B);
+      if (i < 0 || j < 0 || k < 0 || i >= nb[0] || j >= nb[1] || k >= nb[2]) return 0.1;
+      const list = bins[(i * nb[1] + j) * nb[2] + k]; if (!list.length) return 0.1;
+      gd.fill(0.1);
+      for (const idx of list) { const p = prims[idx]; const d = primD(p, x, y, z); const gi = G[p.g]; gd[gi] = smin(gd[gi], d, 0.022); }
+      let d = gd[0]; d = smin(d, gd[1], 0.02); d = smin(d, gd[2], 0.02); d = smin(d, gd[3], 0.03); d = smin(d, gd[4], 0.03);
+      if (opt.off) d -= opt.off;
+      if (opt.cut) d = Math.max(d, opt.cut(x, y, z));
+      return d;
+    }
+    const glo = lo.clone(), ghi = hi.clone();
+    if (opt.cut) { glo.max(new THREE.Vector3(-0.36, opt.ylo - 0.03, -0.3)); ghi.min(new THREE.Vector3(0.36, opt.yhi + 0.03, 0.3)); }
+    // naive surface nets
+    const nx = Math.ceil((ghi.x - glo.x) / res) + 1, ny = Math.ceil((ghi.y - glo.y) / res) + 1, nz = Math.ceil((ghi.z - glo.z) / res) + 1;
+    const F = new Float32Array(nx * ny * nz);
+    const id3 = (i, j, k) => (i * ny + j) * nz + k;
+    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) for (let k = 0; k < nz; k++) F[id3(i, j, k)] = sdf(glo.x + i * res, glo.y + j * res, glo.z + k * res);
+    const vid = new Int32Array((nx - 1) * (ny - 1) * (nz - 1)).fill(-1);
+    const cid = (i, j, k) => (i * (ny - 1) + j) * (nz - 1) + k;
+    const pos = [];
+    const E12 = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+    const corner = (c) => [c & 1, (c >> 1) & 1, (c >> 2) & 1];
+    for (let i = 0; i < nx - 1; i++) for (let j = 0; j < ny - 1; j++) for (let k = 0; k < nz - 1; k++) {
+      const v = []; let neg = 0;
+      for (let c = 0; c < 8; c++) { const [a, b, d] = corner(c); const f = F[id3(i + a, j + b, k + d)]; v.push(f); if (f < 0) neg++; }
+      if (neg === 0 || neg === 8) continue;
+      let sx = 0, sy = 0, sz = 0, n = 0;
+      for (const [c0, c1] of E12) {
+        if ((v[c0] < 0) === (v[c1] < 0)) continue;
+        const t = v[c0] / (v[c0] - v[c1]); const p0 = corner(c0), p1 = corner(c1);
+        sx += p0[0] + (p1[0] - p0[0]) * t; sy += p0[1] + (p1[1] - p0[1]) * t; sz += p0[2] + (p1[2] - p0[2]) * t; n++;
+      }
+      vid[cid(i, j, k)] = pos.length / 3;
+      pos.push(glo.x + (i + sx / n) * res, glo.y + (j + sy / n) * res, glo.z + (k + sz / n) * res);
+    }
+    const idx = [];
+    const quad = (a, b, c, d, flip) => { if (a < 0 || b < 0 || c < 0 || d < 0) return; if (flip) idx.push(a, c, b, a, d, c); else idx.push(a, b, c, a, c, d); };
+    for (let i = 1; i < nx - 1; i++) for (let j = 1; j < ny - 1; j++) for (let k = 1; k < nz - 1; k++) {
+      const f0 = F[id3(i, j, k)];
+      // x-edge
+      { const f1 = F[id3(i + 1, j, k)]; if ((f0 < 0) !== (f1 < 0) && i < nx - 1) quad(vid[cid(i, j - 1, k - 1)], vid[cid(i, j, k - 1)], vid[cid(i, j, k)], vid[cid(i, j - 1, k)], f0 < 0); }
+      { const f1 = F[id3(i, j + 1, k)]; if ((f0 < 0) !== (f1 < 0)) quad(vid[cid(i - 1, j, k - 1)], vid[cid(i - 1, j, k)], vid[cid(i, j, k)], vid[cid(i, j, k - 1)], f0 < 0); }
+      { const f1 = F[id3(i, j, k + 1)]; if ((f0 < 0) !== (f1 < 0)) quad(vid[cid(i - 1, j - 1, k)], vid[cid(i, j - 1, k)], vid[cid(i, j, k)], vid[cid(i - 1, j, k)], f0 < 0); }
+    }
+    // normals from the SDF gradient, skin weights from distance to each bone's parts
+    const nv = pos.length / 3; const nrm = new Float32Array(nv * 3); const sIdx = new Uint16Array(nv * 4); const sW = new Float32Array(nv * 4);
+    const bones = []; fig.traverse((o) => { if (o.isBone) bones.push(o); });
+    const bIndex = new Map(bones.map((b, i) => [b, i]));
+    const e = res * 0.5;
+    const bd = new Map();
+    for (let v = 0; v < nv; v++) {
+      const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+      const gx = sdf(x + e, y, z) - sdf(x - e, y, z), gy = sdf(x, y + e, z) - sdf(x, y - e, z), gz = sdf(x, y, z + e) - sdf(x, y, z - e);
+      const gl = Math.hypot(gx, gy, gz) || 1; nrm[v * 3] = gx / gl; nrm[v * 3 + 1] = gy / gl; nrm[v * 3 + 2] = gz / gl;
+      bd.clear();
+      const i = Math.floor((x - lo.x) / B), j = Math.floor((y - lo.y) / B), k = Math.floor((z - lo.z) / B);
+      const list = (i >= 0 && j >= 0 && k >= 0 && i < nb[0] && j < nb[1] && k < nb[2]) ? bins[(i * nb[1] + j) * nb[2] + k] : [];
+      for (const pi of list) { const p = prims[pi]; const d = primD(p, x, y, z); const cur = bd.get(p.bone); if (cur === undefined || d < cur) bd.set(p.bone, d); }
+      const arr = [...bd.entries()].sort((a, b) => a[1] - b[1]).slice(0, 4);
+      if (!arr.length) { sIdx[v * 4] = bIndex.get(R.pelvis); sW[v * 4] = 1; continue; }
+      const d0 = arr[0][1]; let tot = 0; const ws = arr.map(([, d]) => { const w = Math.exp(-(d - d0) / 0.012); tot += w; return w; });
+      arr.forEach(([b], q) => { sIdx[v * 4 + q] = bIndex.get(b); sW[v * 4 + q] = ws[q] / tot; });
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(sIdx, 4));
+    geo.setAttribute('skinWeight', new THREE.BufferAttribute(sW, 4));
+    geo.setIndex(idx);
+    if (opt.color) { const col = new Float32Array(nv * 3); for (let v = 0; v < nv; v++) { const c = opt.color(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]); col[v * 3] = c[0]; col[v * 3 + 1] = c[1]; col[v * 3 + 2] = c[2]; } geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
+    return { geo, bones };
+  }
+  function attachSkin(fig, geo, mat) {
+    const THREE = T();
+    const bones = []; fig.traverse((o) => { if (o.isBone) bones.push(o); });
+    const R = fig.userData.R;
+    R.root.position.set(0, 0.97, 0);
+    fig.traverse((o) => { if (o.isBone) o.rotation.set(0, 0, 0); });
+    R.shL.rotation.set(0, 0, 38 * D2R); R.shR.rotation.set(0, 0, -38 * D2R);
+    R.hipL.rotation.set(0, 0, 4 * D2R); R.hipR.rotation.set(0, 0, -4 * D2R);
+    fig.updateMatrixWorld(true);
+    // remove the per-part skin meshes
+    const rm = []; fig.traverse((m) => { if (m.isMesh && (m.userData.skinPart || m.userData.trunk)) rm.push(m); }); rm.forEach((m) => m.parent.remove(m));
+    const mesh = new THREE.SkinnedMesh(geo, mat); mesh.frustumCulled = false;
+    fig.add(mesh); fig.updateMatrixWorld(true);
+    mesh.bind(new THREE.Skeleton(bones), mesh.matrixWorld);
+    return mesh;
+  }
+
   // ---------- pose math ----------
-  const SYM = ['s', 'a', 't', 'e', 'h', 'b', 'r', 'k', 'f', 'z', 'y'];
-  const BASE_S = { m: 'S', py: 0.955, pz: 0, px: 0, pit: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, zL: 0, zR: 0, xL: 0.12, xR: -0.12, yL: 0, yR: 0, fL: 0, fR: 0, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
+  const SYM = ['s', 'a', 't', 'e', 'h', 'b', 'r', 'k', 'f', 'z', 'y', 'o'];
+  const BASE_S = { m: 'S', py: 0.955, pz: 0, px: 0, pit: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, zL: 0, zR: 0, xL: 0.12, xR: -0.12, yL: 0, yR: 0, fL: 0, fR: 0, oL: 8, oR: 8, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
   const BASE_F = { m: 'F', pit: 0, spin: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, hL: 0, hR: 0, bL: 0, bR: 0, rL: 0, rR: 0, kL: 0, kR: 0, fL: 0, fR: 0, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
 
   function expand(fr, mode) {
@@ -538,32 +705,40 @@ td { color: var(--muted); }
     if (p.m === 'S') {
       R.root.position.set(p.px, p.py, p.pz);
       fig.updateMatrixWorld(true);
-      const inv = new THREE.Matrix4();
+      // two-bone leg IK with the knee aimed over the toes (pole = foot direction), exact foot pitch + toe-out
+      const figQ = new THREE.Quaternion(); fig.getWorldQuaternion(figQ);
+      const up = new THREE.Vector3(0, 1, 0);
       for (const s of ['L', 'R']) {
-        const hip = R['hip' + s];
-        // target ankle in fig space -> pelvis space
-        const fdeg = p['f' + s];
-        const ay = 0.07 + 0.16 * Math.sin(Math.max(0, fdeg) * D2R) + p['y' + s];
-        const tgt = new THREE.Vector3(p['x' + s], ay, p['z' + s]);
-        fig.localToWorld(tgt);
-        inv.copy(R.pelvis.matrixWorld).invert();
-        tgt.applyMatrix4(inv);
-        tgt.sub(hip.position);
-        const x = tgt.x, y = tgt.y, z = tgt.z;
-        const b = Math.atan2(x, -y);
-        const dyE = Math.sqrt(x * x + y * y);
-        let d = Math.sqrt(dyE * dyE + z * z);
-        d = Math.min(d, L.thigh + L.shin - 1e-4);
-        const phi = Math.atan2(z, dyE); // angle forward (we use rotation.x = -angle)
-        const al = Math.acos(Math.min(1, Math.max(-1, (L.thigh * L.thigh + d * d - L.shin * L.shin) / (2 * L.thigh * d))));
-        const be = Math.acos(Math.min(1, Math.max(-1, (L.shin * L.shin + d * d - L.thigh * L.thigh) / (2 * L.shin * d))));
-        // rotation.x = θ gives direction z=-sinθ -> forward needs negative θ
-        const thighX = -(phi + al);
-        const kneeX = al + be;
-        hip.rotation.set(thighX, 0, b);
-        R['kn' + s].rotation.set(kneeX, 0, 0);
-        const footWorld = fdeg * D2R; // desired foot pitch relative to fig
-        R['an' + s].rotation.set(footWorld - (p.pit * D2R + thighX + kneeX), 0, 0);
+        const sd = s === 'L' ? 1 : -1;
+        const hip = R['hip' + s], kn = R['kn' + s], an = R['an' + s];
+        const fdeg = p['f' + s], o = (p['o' + s] || 0) * D2R;
+        const A = new THREE.Vector3(p['x' + s], 0.07 + 0.16 * Math.sin(Math.max(0, fdeg) * D2R) + p['y' + s], p['z' + s]);
+        const H = new THREE.Vector3(); hip.getWorldPosition(H); fig.worldToLocal(H);
+        const fwdH = new THREE.Vector3(Math.sin(o) * sd, 0, Math.cos(o));
+        const d = A.clone().sub(H); let dist = d.length(); const dn = d.clone().normalize();
+        dist = Math.max(0.05, Math.min(dist, L.thigh + L.shin - 1e-4));
+        const a = (L.thigh * L.thigh + dist * dist - L.shin * L.shin) / (2 * dist);
+        const hgt = Math.sqrt(Math.max(L.thigh * L.thigh - a * a, 0));
+        const pp = fwdH.clone().sub(dn.clone().multiplyScalar(fwdH.dot(dn))); if (pp.lengthSq() < 1e-8) pp.set(0, 0, 1); pp.normalize();
+        const K = H.clone().add(dn.clone().multiplyScalar(a)).add(pp.clone().multiplyScalar(hgt));
+        const Ap = H.clone().add(dn.clone().multiplyScalar(dist));
+        const td = K.clone().sub(H).normalize(), sdv = Ap.clone().sub(K).normalize();
+        const yA = td.clone().negate();
+        const zA = pp.clone().sub(td.clone().multiplyScalar(pp.dot(td))).normalize();
+        const xA = new THREE.Vector3().crossVectors(yA, zA).normalize();
+        const qT = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xA, yA, zA));
+        const qPar = new THREE.Quaternion(); hip.parent.getWorldQuaternion(qPar);
+        hip.quaternion.copy(qPar.invert().multiply(figQ.clone().multiply(qT)));
+        kn.rotation.set(Math.acos(Math.max(-1, Math.min(1, td.dot(sdv)))), 0, 0);
+        hip.updateMatrixWorld(true);
+        // foot: forward = toe direction, pitched down by plantar flexion
+        const fr = fdeg * D2R;
+        const zF = fwdH.clone().multiplyScalar(Math.cos(fr)).add(up.clone().multiplyScalar(-Math.sin(fr)));
+        const yF = up.clone().multiplyScalar(Math.cos(fr)).add(fwdH.clone().multiplyScalar(Math.sin(fr)));
+        const xF = new THREE.Vector3().crossVectors(yF, zF).normalize();
+        const qF = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xF, yF, zF));
+        const qK = new THREE.Quaternion(); kn.getWorldQuaternion(qK);
+        an.quaternion.copy(qK.invert().multiply(figQ.clone().multiply(qF)));
       }
       fig.updateMatrixWorld(true);
       groundFig(fig, ctx && ctx.groundY);
@@ -671,7 +846,7 @@ td { color: var(--muted); }
     scene.fog = new THREE.Fog(new THREE.Color(0x050c16).convertSRGBToLinear(), 5, 13);
     const camera = new THREE.PerspectiveCamera(36, 1, 0.05, 50);
 
-    scene.add(new THREE.HemisphereLight(0x8fb4e8, 0x05070a, 0.55));
+    const hemi = new THREE.HemisphereLight(0x8fb4e8, 0x05070a, 0.55); scene.add(hemi);
     const key = new THREE.DirectionalLight(0xffffff, 1.35); key.position.set(2.2, 4, 3); scene.add(key);
     const rimA = new THREE.DirectionalLight(0x2f86ff, 2.2); rimA.position.set(-3, 2.5, -3); scene.add(rimA);
     const rimB = new THREE.DirectionalLight(0x3aa0ff, 1.6); rimB.position.set(3, 1.5, -3.5); scene.add(rimB);
@@ -715,18 +890,39 @@ td { color: var(--muted); }
       : { skin: mk(0x3a414c, 0.38, 0.42), shorts: mk(0x0b0d11, 0.75, 0.1), band: mk(0x1f6dff, 0.35, 0.2, { emissive: 0x0b2a70, emissiveIntensity: 0.9 }), white: mk(0xe9eef5, 0.5, 0.05), stripe: mk(0x2a7bff, 0.4, 0.1, { emissive: 0x0b2a70, emissiveIntensity: 0.7 }) };
     const dim = (m) => { const c = m.clone(); c.color.multiplyScalar(0.45); if (c.emissive) c.emissive.multiplyScalar(0.5); return c; };
 
-    if (fm) Object.assign(matsTop, { skin: phys(0x3b3e44, 0.55, 0.08, 0.15), shorts: phys(0x101115, 0.2, 0.35, 0.8), white: phys(0xe4e7ec, 0.45, 0.05, 0.2), stripe: phys(0x1e5bff, 0.25, 0.2, 0.6, { emissive: 0x0a2a90, emissiveIntensity: 0.7 }), band: phys(0x1f5cff, 0.3, 0.1, 0.4, { emissive: 0x0b2a90, emissiveIntensity: 0.9 }), boot: phys(0x0c0d10, 0.25, 0.3, 0.9), sole: phys(0x2b6bff, 0.3, 0.1, 0.4, { emissive: 0x1840b0, emissiveIntensity: 1.0 }) });
+    if (fm) Object.assign(matsTop, { skin: phys(0x1d1f23, 0.45, 0.08, 0.35), shorts: phys(0x101115, 0.2, 0.35, 0.8), white: phys(0xe4e7ec, 0.45, 0.05, 0.2), stripe: phys(0x1e5bff, 0.25, 0.2, 0.6, { emissive: 0x0a2a90, emissiveIntensity: 0.7 }), band: phys(0x1f5cff, 0.3, 0.1, 0.4, { emissive: 0x0b2a90, emissiveIntensity: 0.9 }), boot: phys(0x0c0d10, 0.25, 0.3, 0.9), sole: phys(0x2b6bff, 0.3, 0.1, 0.4, { emissive: 0x1840b0, emissiveIntensity: 1.0 }) });
     const build = fm ? buildFighter : buildFigure;
     const fig = build(matsTop); scene.add(fig);
+    let skinGeo = null, trunkGeo = null, trunkMat = null;
+    if (fm) {
+      const skinMat = matsTop.skin; skinMat.skinning = true;
+      const out = smoothSkin(fig, skinMat, opts.res || 0.011); skinGeo = out.geo;
+      attachSkin(fig, skinGeo, skinMat);
+      // satin trunks: the body surface pushed out a little, cut to waist..mid-thigh, bends with the hips
+      const lin3 = (h) => { const c = lin(h); return [c.r, c.g, c.b]; };
+      const BLK = lin3(0x050506), BLU = lin3(0x1d55ff), WHT = lin3(0xf2f4f8);
+      const ylo = 0.62, yhi = 1.1;
+      trunkGeo = smoothSkin(fig, skinMat, opts.res || 0.011, {
+        off: 0.016, ylo, yhi,
+        cut: (x, y, z) => Math.max(ylo - y, y - yhi, Math.abs(x) - 0.3),
+        color: (x, y, z) => y > 1.02 ? WHT : (y < 0.96 && Math.abs(x) > 0.15 && Math.abs(z) < 0.05) ? BLU : BLK,
+      }).geo;
+      trunkMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.3, metalness: 0.1, clearcoat: 0.9, clearcoatRoughness: 0.3, skinning: true });
+      attachSkin(fig, trunkGeo, trunkMat);
+    }
     if (grey) fig.traverse((o) => { if (o.userData.detail) o.visible = false; });
     const mirWrap = new THREE.Group(); mirWrap.scale.y = -1; scene.add(mirWrap);
     const matsMir = {}; for (const k in matsTop) matsMir[k] = dim(matsTop[k]);
     const mir = build(matsMir); mirWrap.add(mir);
+    if (fm) { const mm = matsMir.skin; mm.skinning = true; mir.traverse((m) => { if (m.isMesh && m.material === mm) m.userData.skinPart = 1; }); attachSkin(mir, skinGeo, mm); const tm = trunkMat.clone(); tm.color.setScalar(0.45); tm.skinning = true; attachSkin(mir, trunkGeo, tm); }
     if (grey) mir.traverse((o) => { if (o.userData.detail) o.visible = false; });
     if (opts.noMat) mat.visible = false;
     if (fm) {
       glow.visible = false; halo.visible = false;
-      floor.material.opacity = 0.74; floor.material.roughness = 0.75; floor.material.metalness = 0.0; floor.material.color = lin(0x02040a); key.position.set(-1.5, 4.5, 2.2);
+      hemi.intensity = 0.18; key.intensity = 2.0; key.position.set(1.8, 3.5, 3.2);
+      rimA.intensity = 3.2; rimB.intensity = 2.6; fill.intensity = 0.25;
+      const kick = new THREE.DirectionalLight(0xffffff, 0.9); kick.position.set(-3, 1.5, 1.5); scene.add(kick);
+      floor.material = new THREE.MeshBasicMaterial({ color: lin(0x03070f), transparent: true, opacity: 0.78 }); key.position.set(-1.5, 4.5, 2.2);
       floor.material.color = lin(0x050a14);
       scene.background = gradTex(THREE, 512, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#02050c'); gr.addColorStop(0.55, '#071a3a'); gr.addColorStop(1, '#02050c'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
       const flame = gradTex(THREE, 1024, 512, (g, w, h) => {
@@ -743,11 +939,11 @@ td { color: var(--muted); }
       });
       flame.wrapS = THREE.RepeatWrapping; flame.repeat.set(3, 1);
       const back = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 8, 64, 1, true), new THREE.MeshBasicMaterial({ map: flame, transparent: true, depthWrite: false, fog: false, side: THREE.BackSide }));
-      back.position.set(0, 3.95, 0); scene.add(back);
+      back.position.set(0, 4.0, 0); scene.add(back);
       const horizon = new THREE.Mesh(new THREE.CylinderGeometry(5.98, 5.98, 0.03, 96, 1, true), new THREE.MeshBasicMaterial({ color: 0x5aa8ff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, fog: false, side: THREE.BackSide }));
       horizon.position.set(0, 0.02, 0); scene.add(horizon);
-      const hglow = new THREE.Mesh(new THREE.CylinderGeometry(5.95, 5.95, 1.2, 96, 1, true), new THREE.MeshBasicMaterial({ map: gradTex(THREE, 16, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(40,120,255,0)'); gr.addColorStop(0.5, 'rgba(60,140,255,0.55)'); gr.addColorStop(1, 'rgba(40,120,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
-      hglow.material.side = THREE.BackSide; hglow.position.set(0, 0.02, 0); scene.add(hglow);
+      const hglow = new THREE.Mesh(new THREE.CylinderGeometry(5.95, 5.95, 1.2, 96, 1, true), new THREE.MeshBasicMaterial({ map: gradTex(THREE, 16, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(40,120,255,0)'); gr.addColorStop(1, 'rgba(60,140,255,0.6)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+      hglow.material.side = THREE.BackSide; hglow.position.set(0, 0.61, 0); scene.add(hglow);
       smokes.forEach((sp) => { sp.material.opacity = 0.35; });
       scene.fog.near = 7; scene.fog.far = 16;
     }
@@ -867,7 +1063,7 @@ td { color: var(--muted); }
     canvas.addEventListener('pointercancel', () => { drag = null; });
 
     return {
-      setDemo, resize,
+      setDemo, resize, scene,
       start() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); } },
       stop() { cancelAnimationFrame(raf); raf = 0; },
       play(v) { playing = v; }, isPlaying: () => playing,
@@ -898,9 +1094,9 @@ td { color: var(--muted); }
 
   const FSOL = { a: 'elbowL', b: ['kneeR', 'toeL'], p: 'pit', lo: 0, hi: 140 };
   const squat = (depth, down, extra) => ({
-    cam: [58, 8, 3.5, 0.78],
+    cam: [38, 8, 3.5, 0.78],
     f: [
-      { x: 0.16, h: 1, c: 'FEET SHOULDER-WIDTH · TALL' },
+      { x: 0.21, o: 20, h: 1, c: 'FEET SHOULDER-WIDTH · TOES OUT' },
       { d: down, py: depth.py, pz: depth.pz, pit: depth.pit, s: depth.s, a: 6, e: 4, c: depth.cap || 'HIPS BACK · ' + down + ' SEC DOWN' },
       { h: depth.pause || 1, c: 'PAUSE · BACK FLAT · KNEES OVER TOES' },
       { d: depth.up || 1.1, ease: depth.upEase || 'ease', py: 0.955, pz: 0, pit: 0, s: 0, a: 7, e: 10, c: depth.upCap || 'STAND · PUSH THROUGH WHOLE FOOT', h: 0.7 },
@@ -1058,13 +1254,14 @@ td { color: var(--muted); }
 
   // ---------------- LEGS ----------------
   D.partialSquat = squat({ py: 0.77, pz: -0.08, pit: 20, s: 48, pause: 0.6 }, 2);
-  D.bwSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: 'HIPS BACK · 3 SEC DOWN' }, 3, squatWrong);
+  D.bwSquat = squat({ py: 0.56, pz: -0.15, pit: 38, s: 85, cap: 'HIPS BACK · KNEES OVER TOES' }, 3, squatWrong);
+  D.bwSquat.f[1].nk = -14; D.bwSquat.f[3].nk = 0;
   D.tempoSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: '3 SEC DOWN', pause: 1, up: 1 }, 3);
   D.fastSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: 'DOWN SLOW · 3 SEC', pause: 0.4, up: 0.32, upEase: 'fast', upCap: 'STAND EXPLOSIVE!' }, 3, [{ h: 1.4, c: 'FEET STAY DOWN · REST 10 SEC' }]);
   D.beepSquat = {
-    cam: [58, 8, 3.5, 0.78],
+    cam: [38, 8, 3.5, 0.78],
     f: [
-      { x: 0.16, s: 20, e: 30, h: 1.4, c: 'READY · WAIT FOR THE BEEP…' },
+      { x: 0.21, o: 20, s: 20, e: 30, h: 1.4, c: 'READY · WAIT FOR THE BEEP…' },
       { d: 0.35, ease: 'fast', py: 0.64, pz: -0.12, pit: 32, s: 75, e: 5, c: 'BEEP! SQUAT', beep: 1 },
       { d: 0.35, ease: 'fast', py: 0.955, pz: 0, pit: 0, s: 20, e: 30, c: 'STAND FAST', h: 1.2 },
       { h: 0.6, c: 'RANDOM TIMING BEATS A RHYTHM' },
@@ -1074,7 +1271,7 @@ td { color: var(--muted); }
   D.halfSquatHold.f[2].c = 'HOLD 30–45 SEC · HARD EFFORT';
   D.halfSquatHold.f[3].c = 'STAND · REST 2 MIN';
 
-  const SPLIT = { zL: 0.38, zR: -0.4, fR: 48, xL: 0.11, xR: -0.11 };
+  const SPLIT = { zL: 0.38, zR: -0.42, fR: 50, xL: 0.11, xR: -0.11, oL: 6, oR: 0 };
   D.splitSquat = {
     cam: [84, 8, 3.6, 0.7],
     f: [
@@ -1098,7 +1295,7 @@ td { color: var(--muted); }
   const lunge = (fast) => ({
     cam: [84, 8, 3.6, 0.7],
     f: [
-      Object.assign({ xL: 0.1, xR: -0.1 }, HIPS, { h: 0.8, c: 'STAND TALL · FEET HIP-WIDTH' }),
+      Object.assign({ xL: 0.1, xR: -0.1, o: 6 }, HIPS, { h: 0.8, c: 'STAND TALL · FEET HIP-WIDTH' }),
       { d: 0.7, zR: -0.22, yR: 0.12, pz: -0.06, c: 'STEP BACK — NOT FORWARD' },
       { d: 0.6, zR: -0.5, yR: 0, fR: 46, pz: -0.19, py: 0.92 },
       { d: fast ? 1.6 : 2, py: 0.52, pit: 4, c: fast ? 'LOWER SLOW' : 'LOWER · FRONT SHIN UPRIGHT' },
@@ -1123,7 +1320,7 @@ td { color: var(--muted); }
   D.calfHold = {
     cam: [70, 6, 3.4, 0.7],
     f: [
-      { x: 0.11, h: 0.8, c: 'FEET HIP-WIDTH · FINGERTIP ON WALL OK' },
+      { x: 0.11, o: 4, h: 0.8, c: 'FEET HIP-WIDTH · FINGERTIP ON WALL OK' },
       { d: 1.5, f: 38, c: 'RISE HIGH ON THE BIG TOES' },
       { h: 3.2, c: 'HOLD 30–45 SEC AT THE TOP' },
       { d: 3, f: 0, c: 'LOWER · 3 SEC' },
@@ -1132,7 +1329,7 @@ td { color: var(--muted); }
   D.heelSnap = {
     cam: [70, 6, 3.4, 0.7],
     f: [
-      { x: 0.11, h: 0.8, c: 'TALL · FEET HIP-WIDTH' },
+      { x: 0.11, o: 4, h: 0.8, c: 'TALL · FEET HIP-WIDTH' },
       { d: 0.22, ease: 'fast', f: 38, c: 'RISE FAST!' },
       { h: 0.4, c: 'FEET NEVER LEAVE THE FLOOR' },
       { d: 3, f: 0, c: 'LOWER · 3 SEC' },
@@ -1141,9 +1338,9 @@ td { color: var(--muted); }
   D.snapDown = {
     cam: [62, 8, 3.6, 0.8],
     f: [
-      { x: 0.15, h: 0.6, c: 'STAND TALL' },
+      { x: 0.2, o: 15, h: 0.6, c: 'STAND TALL · FEET HIP-TO-SHOULDER WIDTH' },
       { d: 0.8, f: 30, s: 168, a: 12, e: 5, c: 'RISE TALL · ARMS UP' },
-      { d: 0.3, ease: 'fast', f: 0, py: 0.73, pz: -0.11, pit: 30, s: -32, a: 10, e: 15, c: 'SNAP DOWN!' },
+      { d: 0.3, ease: 'fast', f: 0, py: 0.72, pz: -0.12, pit: 32, nk: -12, s: -32, a: 10, e: 15, c: 'SNAP DOWN!' },
       { h: 2, c: 'FREEZE 2 SEC · LANDING SHAPE' },
       { d: 1, py: 0.955, pz: 0, pit: 0, s: 0, a: 7, e: 10, c: 'FEET NEVER LEAVE THE FLOOR', h: 0.4 },
     ],
@@ -1159,6 +1356,26 @@ td { color: var(--muted); }
       { d: 1.5, h: 58, k: 105, c: 'LOWER SLOW' },
       { d: 1.2, h: -14, k: 82, sp: -24, w: 1, c: '✗ OVER-ARCHING — LOW BACK TAKES OVER' },
       { d: 1.2, h: 58, k: 105, sp: 0, c: 'FEEL: GLUTES + HAMSTRINGS, NOT LOW BACK' },
+    ],
+  };
+  D.kickstandBridge = {
+    cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
+    f: [
+      Object.assign({}, SUPINE_BENT, { hR: 6, kR: 12, sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 }, hh: 0.8, c: 'WORKING FOOT FLAT · HELPER HEEL OUT' }),
+      { d: 1.2, hL: 4, kL: 88, hR: -28, kR: 6, c: 'DRIVE THROUGH THE WORKING HEEL' },
+      { hh: 1.2, c: 'HOLD 2 SEC · HIPS LEVEL' },
+      { d: 1.6, hL: 58, kL: 105, hR: 6, kR: 12, c: 'LOWER SLOW · HELPER FOOT JUST BALANCES' },
+    ],
+  };
+  D.singleLegBridge = {
+    cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
+    f: [
+      Object.assign({}, SUPINE_BENT, { hR: 40, kR: 4, sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 }, hh: 0.8, c: 'ONE FOOT DOWN · OTHER LEG LONG' }),
+      { d: 1.2, hL: 4, kL: 88, hR: 4, kR: 2, c: 'HIPS UP · LEG IN LINE WITH THIGH' },
+      { hh: 1.4, c: 'HOLD 2 SEC · NO ARCH' },
+      { d: 2, hL: 58, kL: 105, hR: 40, kR: 4, c: 'LOWER SLOW' },
+      { d: 1.2, hL: 4, kL: 88, hR: -14, kR: 2, sp: -18, w: 1, c: '✗ HIPS TWIST + LOW BACK ARCHES' },
+      { d: 1.2, hL: 58, kL: 105, hR: 40, kR: 4, sp: 0, c: 'KEEP BOTH HIPS LEVEL' },
     ],
   };
   D.bridgeHold = {
@@ -1219,7 +1436,7 @@ td { color: var(--muted); }
     cam: [82, 8, 3.4, 0.85],
     props: [{ type: 'wall', at: 'glute', frame: 2, side: -1, face: -1, dz: 0.02 }],
     f: [
-      { x: 0.13, s: 42, a: -12, e: 128, h: 0.8, c: 'WALL ONE FOOT BEHIND YOU' },
+      { x: 0.13, o: 10, s: 42, a: -12, e: 128, h: 0.8, c: 'WALL ONE FOOT BEHIND YOU · SOFT KNEES' },
       { d: 2, pit: 52, pz: -0.16, py: 0.9, c: 'PUSH HIPS BACK · FLAT BACK' },
       { h: 0.6, c: 'LIGHT BUTT TAP ON THE WALL' },
       { d: 1.2, pit: 0, pz: 0, py: 0.955, c: 'SQUEEZE GLUTES TO STAND', h: 0.6 },
@@ -1379,7 +1596,7 @@ td { color: var(--muted); }
   };
 
   // ---------------- REACTION / FOOTWORK ----------------
-  const STANCE = Object.assign({ py: 0.9, pit: 8, zL: 0.17, zR: -0.17, xL: 0.13, xR: -0.13, fR: 14, yaw: 0 }, GUARD);
+  const STANCE = Object.assign({ py: 0.9, pit: 8, zL: 0.17, zR: -0.17, xL: 0.13, xR: -0.13, fR: 14, oL: 20, oR: 45, yaw: 0 }, GUARD);
   D.pointStep = {
     cam: [20, 10, 3.8, 0.8],
     f: [
@@ -1518,20 +1735,16 @@ td { color: var(--muted); }
       ],
     },
     core: {
-      name: 'Hinge & Core', short: 'CORE', note: 'Core = McGill Big 3 (bird dog, modified curl-up, side plank). Short holds of ~8–10 sec, descending reps (e.g. 6-4-2), 2–3 sets. The exercise family is well supported; the exact package only has small trials — it is not proven better than other core work.',
+      name: 'Hinge & Glute', short: 'GLUTE', note: 'Glute and hamstring strength, loaded without bending the spine. Bridges are the safest way to load hip extension on a mat. Once two legs is easy, one leg roughly doubles the load (single-leg bridges show high glute activity in EMG studies). The Big 3 core block runs every session alongside this ladder, so core work never replaces glute work.',
       steps: [
         { id: 'core0', name: 'Glute Bridge + Hold', demo: 'gluteBridge', sets: 3, reps: [10, 15], unit: 'reps', perLabel: '2-sec squeeze + 30-sec hold to finish', tempo: '1 sec up · 2 sec squeeze · 2 sec down', rest: REST.hinge,
           cues: ['Feet flat, knees bent', 'Squeeze glutes, hips up', 'Ribs down — no arching'], feel: 'Glutes + hamstrings, NOT low back.', wrong: 'Over-arching at the top.', unlock: UNLOCK_RULE },
-        { id: 'core1', name: 'Bird Dog — Big 3 #1', demo: 'birdDog', sets: 3, reps: [6, 8], unit: 'reps/side', perLabel: '7–10 sec holds · pyramid 6-4-2', tempo: 'Reach · hold 7–10 sec · return', rest: REST.core, sub: 'Dead bug if balance fails.',
-          cues: ['Hands under shoulders, knees under hips', 'Reach long, not high', 'Hips level — hold'], feel: 'Glute + back of shoulder.', wrong: 'Leg too high, low back arches.', unlock: UNLOCK_RULE },
-        { id: 'core2', name: 'Modified Curl-Up — Big 3 #2', demo: 'curlUp', sets: 3, reps: [6, 8], unit: 'reps/side', perLabel: '7–10 sec holds · pyramid 6-4-2', tempo: 'Lift a little · hold 7–10 sec', rest: REST.core, sub: 'Dead bug if it bothers your back.',
-          cues: ['One knee bent, hands under low back (sensors)', 'Lift only head + shoulders, a little', 'Neck still — this is NOT a crunch'], feel: 'Front abs bracing. Hands feel the low back stay still.', wrong: 'Curling up high like a crunch.', unlock: UNLOCK_RULE },
-        { id: 'core3', name: 'Side Plank — Big 3 #3 (knees → full)', demo: 'sidePlankKnees', demoAlt: 'sidePlankFull', sets: 3, reps: [4, 6], unit: 'holds/side', perLabel: '7–10 sec each · pyramid', tempo: 'Hold 7–10 sec', rest: REST.core,
-          cues: ['Elbow under shoulder', 'Lift hips — straight line', 'Short perfect holds beat one long shaky hold'], feel: 'Side of the trunk.', wrong: 'Hips sagging or rolling forward.', unlock: UNLOCK_RULE },
-        { id: 'core4', name: 'Standing Hip Hinge — Wall Check, No Load', demo: 'hipHinge', sets: 3, reps: [8, 12], unit: 'reps', tempo: '2 sec back · stand', rest: REST.hinge,
-          cues: ['Wall about a foot behind you', 'Hips back until your butt lightly taps the wall', 'Flat back — stop the moment it wants to round'], feel: 'Hamstring stretch, flat back. No weight is ever added in this plan.', wrong: 'Back rounding.', unlock: UNLOCK_RULE },
-        { id: 'core5', name: 'Front Plank Pyramid — Short Perfect Holds', demo: 'frontPlank', sets: 3, reps: [6, 6], unit: 'holds', perLabel: '10-sec holds, breathe between', tempo: 'Hold 10 sec', rest: REST.core,
-          cues: ['Forearms down, elbows under shoulders', 'One line head → heels', 'Add holds, never hold time'], feel: 'Whole trunk bracing. Never at the cost of neutral spine.', wrong: 'Hips sagging, low back arching.', unlock: 'Top of the core ladder' },
+        { id: 'glute1', name: 'Single-Leg Bridge — Kickstand', demo: 'kickstandBridge', sets: 3, reps: [6, 10], unit: 'reps/side', perLabel: '2-sec squeeze', tempo: '1 sec up · 2 sec squeeze · 2 sec down', rest: REST.hinge,
+          cues: ['Working foot flat under the knee', 'Other heel lightly on the floor — just for balance', 'Hips up level, ribs down'], feel: 'Mostly the working-side glute.', wrong: 'Hips tilting, or pushing through the helper foot.', unlock: 'Top of the range on every set, 2 sessions in a row, “just right” or “too easy”, clean form, green pain' },
+        { id: 'glute2', name: 'Single-Leg Bridge', demo: 'singleLegBridge', sets: 3, reps: [6, 12], unit: 'reps/side', perLabel: '2-sec hold at top', tempo: '1 sec up · 2 sec hold · 2 sec down', rest: REST.hinge,
+          cues: ['Other knee pulled up (or leg straight)', 'Drive through the heel, hips level', 'No arching at the top'], feel: 'Glute + hamstring, one side.', wrong: 'Hip on the free side dropping.', unlock: 'Top of the range on every set, 2 sessions in a row, “just right” or “too easy”, clean form, green pain' },
+        { id: 'glute3', name: 'Single-Leg Bridge — Slow Lower + Hold', demo: 'singleLegBridge', sets: 3, reps: [6, 10], unit: 'reps/side', perLabel: '3-sec lower + 20-sec hold on the last rep', tempo: '1 sec up · 3 sec down', rest: REST.hinge,
+          cues: ['Same as single-leg bridge', 'Lower over 3 seconds', 'Last rep: hold 20 sec at the top'], feel: 'Deep glute burn. Pain-free low back.', wrong: 'Low back takes over.', unlock: 'Top of the home glute ladder' },
       ],
     },
     power: {
@@ -1553,8 +1766,27 @@ td { color: var(--muted); }
     },
   };
 
+
+  // Big 3 block: done every Day A and Day B, short perfect holds.
+  const BIG3 = [
+        { id: 'core1', name: 'Bird Dog — Big 3 #1', demo: 'birdDog', sets: 3, reps: [6, 8], unit: 'reps/side', perLabel: '7–10 sec holds · pyramid 6-4-2', tempo: 'Reach · hold 7–10 sec · return', rest: REST.core, sub: 'Dead bug if balance fails.',
+          cues: ['Hands under shoulders, knees under hips', 'Reach long, not high', 'Hips level — hold'], feel: 'Glute + back of shoulder.', wrong: 'Leg too high, low back arches.', unlock: UNLOCK_RULE },
+        { id: 'core2', name: 'Modified Curl-Up — Big 3 #2', demo: 'curlUp', sets: 3, reps: [6, 8], unit: 'reps/side', perLabel: '7–10 sec holds · pyramid 6-4-2', tempo: 'Lift a little · hold 7–10 sec', rest: REST.core, sub: 'Dead bug if it bothers your back.',
+          cues: ['One knee bent, hands under low back (sensors)', 'Lift only head + shoulders, a little', 'Neck still — this is NOT a crunch'], feel: 'Front abs bracing. Hands feel the low back stay still.', wrong: 'Curling up high like a crunch.', unlock: UNLOCK_RULE },
+        { id: 'core3', name: 'Side Plank — Big 3 #3 (knees → full)', demo: 'sidePlankKnees', demoAlt: 'sidePlankFull', sets: 3, reps: [4, 6], unit: 'holds/side', perLabel: '7–10 sec each · pyramid', tempo: 'Hold 7–10 sec', rest: REST.core,
+          cues: ['Elbow under shoulder', 'Lift hips — straight line', 'Short perfect holds beat one long shaky hold'], feel: 'Side of the trunk.', wrong: 'Hips sagging or rolling forward.', unlock: UNLOCK_RULE },
+  ];
+  BIG3.forEach((b) => { b.kind = 'big3'; b.unlock = b.id === 'core3' ? 'Knees → full side plank once 6 clean 10-sec holds per side feel “just right”, 2 sessions in a row' : 'Add holds before seconds: build to 3 sets of 6-4-2 reps with 8–10 sec holds'; });
+  const EXTRAS = [
+        { id: 'core4', name: 'Standing Hip Hinge — Wall Check, No Load', demo: 'hipHinge', sets: 3, reps: [8, 12], unit: 'reps', tempo: '2 sec back · stand', rest: REST.hinge,
+          cues: ['Wall about a foot behind you', 'Hips back until your butt lightly taps the wall', 'Flat back — stop the moment it wants to round'], feel: 'Hamstring stretch, flat back. No weight is ever added in this plan.', wrong: 'Back rounding.', unlock: UNLOCK_RULE },
+        { id: 'core5', name: 'Front Plank Pyramid — Short Perfect Holds', demo: 'frontPlank', sets: 3, reps: [6, 6], unit: 'holds', perLabel: '10-sec holds, breathe between', tempo: 'Hold 10 sec', rest: REST.core,
+          cues: ['Forearms down, elbows under shoulders', 'One line head → heels', 'Add holds, never hold time'], feel: 'Whole trunk bracing. Never at the cost of neutral spine.', wrong: 'Hips sagging, low back arching.', unlock: 'Top of the core ladder' },
+  ];
+  EXTRAS.forEach((b) => { b.kind = 'extra'; });
   const EX = {}; // id -> exercise (ladder steps + others)
   for (const k in LADDERS) LADDERS[k].steps.forEach((s, i) => { s.ladder = k; s.step = i; EX[s.id] = s; });
+  BIG3.concat(EXTRAS).forEach((b) => { EX[b.id] = b; });
 
   const TENDON = [
     { id: 'tHalf', name: 'Half-Squat Hold', demo: 'halfSquatHold', tendon: 'Knee (patellar) tendon', sets: 3, reps: [30, 45], unit: 'sec', tempo: 'Hold at a hard effort', rest: REST.tHold, cues: ['Sit halfway down', 'Knees over toes, back flat', 'Hold 30–45 sec'], feel: 'Thighs working hard. Pain ≤3/10.', wrong: 'Knees caving in.' },
@@ -1592,17 +1824,18 @@ td { color: var(--muted); }
   const FOOTWORK = { id: 'fw', name: 'Footwork: Step-Drag + Shuffle', demo: 'footwork', kind: 'reaction', dose: 'Practice in short rounds', rest: REST.react, cues: ['Stance a little wider than shoulders, one foot slightly forward', 'Forward: front foot first. Back: back foot first', 'Feet never cross · turn by stepping, never twisting the spine'] };
   EX.fw = FOOTWORK;
   const SUBS = [
-    { id: 'subDoor', name: 'Doorway Pull (no safe table)', demo: 'doorwayPull', dose: 'Hold 10–20 sec × 4–5', cues: ['Hold both sides of a door frame', 'Lean back with a straight body', 'Pull hard and hold'], rest: REST.gen, kind: 'sub' },
+    { id: 'subDoor', name: 'Doorway Pull Hold', demo: 'doorwayPull', sets: 4, reps: [10, 20], unit: 'sec', tempo: 'Pull hard · hold', tendon: 'Real pull for lats + upper back', dose: 'Hold 10–20 sec × 4–5', cues: ['Hold both sides of a door frame', 'Lean back with a straight body', 'Pull hard and hold'], rest: REST.gen, kind: 'sub' },
     { id: 'subBug', name: 'Dead Bug (bird dog / curl-up substitute)', demo: 'deadBug', dose: '3 × 6–8 / side', cues: ['Arms up, knees over hips', 'Reach opposite arm + leg slowly', 'Low back stays on the mat'], rest: REST.core, kind: 'sub' },
   ];
   SUBS.forEach((s) => { EX[s.id] = s; });
 
   const DAYS = {
-    // Power goes first (fresh legs = fast reps); tendon block last.
-    A: { name: 'Push + Legs + Big 3', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'legs' }, { lad: 'core' }, { ex: 'tHalf' }] },
-    B: { name: 'Pull + Hinge + Core', items: [{ lad: 'power' }, { lad: 'pull' }, { lad: 'legs' }, { lad: 'core' }, { ex: 'tY' }] },
-    C: { name: 'Full Body + Mobility', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'pull' }, { lad: 'legs' }, { flow: true }] },
+    // Power first (fresh), then main ladders, Big 3 block, tendon block last.
+    A: { name: 'Push + Legs + Glutes + Big 3', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }, { ex: 'tCalf' }] },
+    B: { name: 'Pull + Legs + Glutes + Big 3', items: [{ lad: 'power' }, { lad: 'pull' }, { ex: 'subDoor' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }, { ex: 'tY' }] },
+    C: { name: 'Full Body + Mobility', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'pull' }, { ex: 'subDoor' }, { lad: 'legs' }, { ex: 'tHalf' }, { flow: true }] },
   };
+
 
   const VARIATIONS = [
     ['Horizontal push', 'Wall push-up → incline push-up (high → low) → floor push-up → feet-elevated → archer. Wrist pain: fists or hands on a step. Shoulder pain: narrower hands, shorter range, incline only.'],
@@ -1636,7 +1869,7 @@ td { color: var(--muted); }
     ['Between sessions', '48 hours · non-consecutive days · 3× per week'],
   ];
 
-  window.PLAN = { REST, LADDERS, EX, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
+  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
 })();
 
 </script>
@@ -1710,7 +1943,7 @@ td { color: var(--muted); }
   const curEx = (k) => P.LADDERS[k].steps[stepOf(k)];
   const logsSorted = () => Object.entries(S.data.logs).map(([id, l]) => Object.assign({ id }, l))
     .sort((a, b) => (a.createdAt || a.date || '').localeCompare(b.createdAt || b.date || ''));
-  const realLogs = () => logsSorted().filter((l) => !l.seeded);
+  const realLogs = () => logsSorted().filter((l) => !l.seeded && l.type !== 'walk');
   function entriesFor(pred) {
     const out = [];
     for (const l of realLogs()) for (const e of (l.entries || [])) if (pred(e, l)) out.push(Object.assign({ date: l.date, logId: l.id }, e));
@@ -1725,7 +1958,7 @@ td { color: var(--muted); }
     if (!last) return 'A';
     return { A: 'B', B: 'C', C: 'A' }[last.day] || 'A';
   }
-  function lastSessionDate() { const ls = logsSorted().filter((l) => l.date); return ls.length ? ls[ls.length - 1].date : null; }
+  function lastSessionDate() { const ls = logsSorted().filter((l) => l.date && l.type !== 'walk'); return ls.length ? ls[ls.length - 1].date : null; }
 
   // ---------------- adaptation (Section 9) ----------------
   function setsTarget(ex) { return inDeload() ? Math.ceil(ex.sets / 2) : ex.sets; }
@@ -1880,9 +2113,15 @@ td { color: var(--muted); }
     h += morningCheckCard();
     if (lastResult) h += changedCard(lastResult.msgs, 'What changed and why', true);
     else { const recent = changesSorted().slice(0, 3); if (recent.length) h += changedCard(recent.map((c) => c.text), 'Recent changes', false); }
-    h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li></ul></section>';
+    h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li><li>Rough day? 1–2 sets still count — beginners gain almost as much from fewer sets.</li></ul></section>';
     h += '<div class="warm"><b>Warm-up</b> Mobility Flow 1–5 (about 5 min) <a href="#mobility">Open flow</a></div>';
-    DY.items.forEach((it, i) => { h += it.flow ? flowCard(i) : exCard(it.lad ? curEx(it.lad) : P.EX[it.ex], i + 1); });
+    let n = 0;
+    DY.items.forEach((it) => {
+      if (it.flow) { h += flowCard(n++); return; }
+      if (it.big3) { h += '<div class="blockhead"><b>Big 3 core block</b> short perfect holds · 30 sec rest</div>'; P.BIG3.forEach((b) => { h += exCard(b, ++n); }); return; }
+      h += exCard(it.lad ? curEx(it.lad) : P.EX[it.ex], ++n);
+    });
+    h += walkCard();
     h += '<div class="finish"><button type="button" id="finish" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Finish workout + save</button><p class="fine">Saves your sets, ratings and pain. The plan then adapts: pain first, then form, then reps and feedback.</p></div>';
     h += stopRulesCard(true);
     return h;
@@ -1898,7 +2137,7 @@ td { color: var(--muted); }
     let h = '<article class="card ex" data-ex="' + ex.id + '">';
     h += '<div class="ex-top"><span class="num">' + n + '</span><div class="ex-head">';
     if (ex.ladder) h += '<div class="tag">' + P.LADDERS[ex.ladder].short + ' · STEP ' + SN(ex.step) + SNOF(ex.ladder) + ' ' + ladderDots(ex.ladder) + '</div>';
-    else h += '<div class="tag">TENDON · ' + esc(ex.tendon) + '</div>';
+    else h += '<div class="tag">' + (ex.kind === 'big3' ? 'BIG 3 CORE BLOCK' : ex.kind === 'sub' ? 'MAIN PULL · ' + esc(ex.tendon) : 'TENDON · ' + esc(ex.tendon)) + '</div>';
     h += '<h3>' + esc(ex.name) + '</h3><div class="dose">' + doseLine(ex) + '</div><div class="tempo">Tempo: ' + esc(ex.tempo) + '</div></div></div>';
     h += demoBtn(ex.id);
     h += cueList(ex);
@@ -1927,6 +2166,11 @@ td { color: var(--muted); }
     h += '</div></article>';
     return h;
   }
+  function walkCard() {
+    const walks = logsSorted().filter((l) => l.type === 'walk');
+    const wk = walks.filter((l) => l.date && daysBetween(l.date, todayStr()) < 7).reduce((a, l) => a + (l.minutes || 0), 0);
+    return '<section class="card walk"><div class="tag">CONDITIONING · OFF DAYS</div><h3>Brisk walk 20–30 min</h3><p>Aerobic fitness is one of the main things that decide boxing performance. Walking builds it with the fewest aches at your weight. 2–3 times a week, on non-lifting days. Pace: you can talk, but not sing.</p><p class="fine">This week: <b>' + wk + ' min</b> walked.</p><div class="wrow"><input id="walkmin" type="number" inputmode="numeric" placeholder="minutes"><button type="button" id="saveWalk" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Log walk</button></div></section>';
+  }
   function painClass(v) { return v >= 6 ? 'r' : v >= 4 ? 'a' : 'g'; }
   function flowCard(i) {
     const d = D('flow');
@@ -1945,7 +2189,7 @@ td { color: var(--muted); }
 
   // ---- next-morning check
   function pendingCheck() {
-    const ls = logsSorted().filter((l) => l.date && l.date < todayStr());
+    const ls = logsSorted().filter((l) => l.date && l.date < todayStr() && l.type !== 'walk');
     const last = ls[ls.length - 1];
     if (!last || S.data.checks[last.id]) return null;
     if (daysBetween(last.date, todayStr()) > 2) return null;
@@ -2026,7 +2270,9 @@ td { color: var(--muted); }
     const day = selDay || suggestDay();
     const DY = P.DAYS[day];
     const entries = [];
-    for (const it of DY.items) {
+    const flat = [];
+    for (const it of DY.items) { if (it.big3) P.BIG3.forEach((b) => flat.push({ ex: b.id })); else flat.push(it); }
+    for (const it of flat) {
       if (it.flow) { const d = D('flow'); if (d.done || d.rating) entries.push({ ex: 'flow', kind: 'mobility', rating: d.rating || null, pain: d.pain || 0 }); continue; }
       const ex = it.lad ? curEx(it.lad) : P.EX[it.ex];
       const d = D(ex.id);
@@ -2073,6 +2319,8 @@ td { color: var(--muted); }
     let h = '<section class="hero slim"><h1>How To</h1><p>Every move, every step. Tap <b>Watch 1 rep</b> for the 3D demo with form notes.</p></section>';
     h += backRulesCard();
     for (const k of ['push', 'pull', 'legs', 'core']) h += ladderSection(k);
+    h += '<section class="block"><h2>Big 3 core block</h2><p class="fine">Every Day A and B. Short holds of 8–10 sec, descending reps (6-4-2), 2–3 sets. Low spine load: the curl-up gave the best ratio of ab work to spine compression in McGill’s lab tests. Good, not magic — a Cochrane review found this kind of core work isn’t better than other exercise for back pain.</p>' + P.BIG3.map((b) => miniCard(b)).join('') + '</section>';
+    h += '<section class="block"><h2>Extras</h2><p class="fine">The wall-check hinge is now part of the warm-up (Mobility Flow #2). The front plank pyramid is optional core work on Day C or off days.</p>' + P.EXTRAS.map((b) => miniCard(b)).join('') + '</section>';
     h += '<section class="block"><h2>Substitutes</h2>' + P.SUBS.map((s) => miniCard(s)).join('') + '</section>';
     h += '<section class="block"><h2>Swap options by pattern</h2><p class="fine">Easier → standard → harder. Use when a move hurts, doesn’t suit you, or stalls.</p>' + P.VARIATIONS.map(([t, d]) => '<details><summary>' + esc(t) + '</summary><p>' + esc(d) + '</p></details>').join('') + '</section>';
     return h;
@@ -2219,6 +2467,10 @@ td { color: var(--muted); }
       '<li><b>Changed: feeling sick is a stop rule.</b> Nausea during exercise is tied to effort, training fasted, and fluid balance. Light snack 1–2 h before, sip water, ease in. (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6680692/" target="_blank" rel="noopener">Sports review</a>)</li>' +
       '<li><b>Changed: tendon holds get harder, not longer.</b> Tendons respond to how heavy the load is, not the type or length of contraction. (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4532714/" target="_blank" rel="noopener">Bohm 2015 meta-analysis</a>, <a href="https://doaj.org/article/6de7373a65ab439ea4609085bb4a8f6e" target="_blank" rel="noopener">Schroll 2024</a>)</li>' +
       '<li><b>Corrected: stretching numbers.</b> Holds of 60 sec or more before training cut performance about 4.6%; under 60 sec about 1%. (<a href="https://pubmed.ncbi.nlm.nih.gov/21659901/" target="_blank" rel="noopener">Kay &amp; Blazevich 2012</a>, Behm 2016)</li>' +
+      '<li><b>Changed: Hinge &amp; Glute ladder + Big 3 block.</b> The old ladder replaced glute work with core holds as you levelled up. Now glutes progress to single-leg bridges, and the Big 3 runs every Day A/B. (<a href="https://brookbushinstitute.com/articles/electromyographic-analysis-of-gluteus-maximus-and-hamstring-activity-during-the-supine-resisted-hip-extension-exercise-versus-supine-unilateral-bridge-to-neutral" target="_blank" rel="noopener">single-leg bridge EMG</a>)</li>' +
+      '<li><b>Changed: a real pull every pull day.</b> Rows give the most lat work with the least low-back load. The Doorway Pull Hold now joins the prone work. A cheap resistance band would be the biggest upgrade. (<a href="https://www.asep.org/asep/asep/JEPonlineDecember2013_Snarr_Esco.pdf" target="_blank" rel="noopener">inverted row EMG</a>)</li>' +
+      '<li><b>Added: walking on off days.</b> Aerobic fitness is a main driver of boxing performance; walking builds it with the fewest aches. (<a href="https://pubmed.ncbi.nlm.nih.gov/40129283/" target="_blank" rel="noopener">network meta-analysis</a>)</li>' +
+      '<li><b>Changed: Day A tendon = Calf Raise Hold.</b> Day A already had two squat moves; Half-Squat Hold moved to Day C.</li>' +
       '<li><b>Confirmed: 90 sec rest.</b> Resting over 60 sec helps a little; over 90 sec adds nothing for muscle growth. (<a href="https://pubmed.ncbi.nlm.nih.gov/39205815/" target="_blank" rel="noopener">Singer 2024</a>)</li>' +
       '<li><b>Confirmed: Big 3 is good, not magic.</b> Motor-control core work is not better than other exercise for back pain — pick what you like and tolerate. (<a href="https://pubmed.ncbi.nlm.nih.gov/26742533/" target="_blank" rel="noopener">Cochrane review</a>)</li>' +
       '<li><b>Confirmed: no lifelong bending ban.</b> Flexion limits are for early disc symptoms; exercise is first-line care. (<a href="https://www.frontiersin.org/articles/10.3389/fphys.2024.1309663/full" target="_blank" rel="noopener">2024 review</a>)</li>' +
@@ -2252,6 +2504,7 @@ td { color: var(--muted); }
       await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: why + ' Now Step ' + SN(to) + ': ' + P.LADDERS[k].steps[to].name + '.' });
       confirmMove = null; render(); return;
     }
+    if (t.id === 'saveWalk') { const v = Number($('#walkmin').value); if (!v || v < 1 || v > 300) { toast('Enter minutes walked.'); return; } await put('logs', 'walk' + Date.now(), { type: 'walk', date: todayStr(), minutes: v, title: 'Walk — ' + v + ' min', createdAt: new Date().toISOString(), entries: [] }); toast('Walk saved.'); render(); return; }
     if (t.id === 'saveWt') { const v = Number($('#wt').value); if (!v || v < 80 || v > 500) { toast('Enter your weight in lbs.'); return; } await put('body', 'b' + Date.now(), { date: todayStr(), lbs: v }); $('#wt').value = ''; render(); toast('Weight saved.'); return; }
     if (t.id === 'startDeload') { const p = Object.assign({}, profile() || {}); const until = new Date(Date.now() + 6 * 86400000); p.deloadUntil = until.toISOString().slice(0, 10); p.deloads = (p.deloads || []).concat([todayStr()]); await put('plan', 'profile', p); await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: 'Deload week started: about half the sets, same levels, stop with 4+ reps left.' }); render(); return; }
   });
@@ -2286,12 +2539,16 @@ td { color: var(--muted); }
     $('#pl-cues').innerHTML = ex ? cueList(ex) + (ex.wrong ? '<p class="wrongtxt"><b>Avoid:</b> ' + esc(ex.wrong) + '</p>' : '') : '';
     if (!window.THREE || !demo) { $('#pl-fail').hidden = false; return; }
     $('#pl-fail').hidden = true;
+    if (!player) { const el = $('#pl-cap'); el.textContent = 'Building 3D figure…'; el.hidden = false; el.className = 'cap'; setTimeout(() => buildAndPlay(demo), 60); return; }
+    buildAndPlay(demo);
+  }
+  function buildAndPlay(demo) {
     try {
       if (!player) {
         player = window.DemoEngine.Player($('#pl-canvas'), {
           caption: (c, w, beep) => { const el = $('#pl-cap'); el.textContent = c || ''; el.hidden = !c; el.className = 'cap' + (w ? ' wrong' : '') + (beep ? ' beep' : ''); },
           progress: (u) => { $('#pl-bar').style.width = (u * 100).toFixed(1) + '%'; },
-        }, { style: 'fm' });
+        }, { style: 'fm', res: 0.013 });
       }
       requestAnimationFrame(() => { player.resize(); player.setDemo(demo); player.play(true); player.setSpeed(1); $('#pl-pause').textContent = 'Pause'; $('#pl-slow').classList.remove('on'); player.start(); });
     } catch (e) { $('#pl-fail').hidden = false; }

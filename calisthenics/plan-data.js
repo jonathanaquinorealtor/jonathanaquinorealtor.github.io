@@ -73,20 +73,16 @@
       ],
     },
     core: {
-      name: 'Hinge & Core', short: 'CORE', note: 'Core = McGill Big 3 (bird dog, modified curl-up, side plank). Short holds of ~8–10 sec, descending reps (e.g. 6-4-2), 2–3 sets. The exercise family is well supported; the exact package only has small trials — it is not proven better than other core work.',
+      name: 'Hinge & Glute', short: 'GLUTE', note: 'Glute and hamstring strength, loaded without bending the spine. Bridges are the safest way to load hip extension on a mat. Once two legs is easy, one leg roughly doubles the load (single-leg bridges show high glute activity in EMG studies). The Big 3 core block runs every session alongside this ladder, so core work never replaces glute work.',
       steps: [
         { id: 'core0', name: 'Glute Bridge + Hold', demo: 'gluteBridge', sets: 3, reps: [10, 15], unit: 'reps', perLabel: '2-sec squeeze + 30-sec hold to finish', tempo: '1 sec up · 2 sec squeeze · 2 sec down', rest: REST.hinge,
           cues: ['Feet flat, knees bent', 'Squeeze glutes, hips up', 'Ribs down — no arching'], feel: 'Glutes + hamstrings, NOT low back.', wrong: 'Over-arching at the top.', unlock: UNLOCK_RULE },
-        { id: 'core1', name: 'Bird Dog — Big 3 #1', demo: 'birdDog', sets: 3, reps: [6, 8], unit: 'reps/side', perLabel: '7–10 sec holds · pyramid 6-4-2', tempo: 'Reach · hold 7–10 sec · return', rest: REST.core, sub: 'Dead bug if balance fails.',
-          cues: ['Hands under shoulders, knees under hips', 'Reach long, not high', 'Hips level — hold'], feel: 'Glute + back of shoulder.', wrong: 'Leg too high, low back arches.', unlock: UNLOCK_RULE },
-        { id: 'core2', name: 'Modified Curl-Up — Big 3 #2', demo: 'curlUp', sets: 3, reps: [6, 8], unit: 'reps/side', perLabel: '7–10 sec holds · pyramid 6-4-2', tempo: 'Lift a little · hold 7–10 sec', rest: REST.core, sub: 'Dead bug if it bothers your back.',
-          cues: ['One knee bent, hands under low back (sensors)', 'Lift only head + shoulders, a little', 'Neck still — this is NOT a crunch'], feel: 'Front abs bracing. Hands feel the low back stay still.', wrong: 'Curling up high like a crunch.', unlock: UNLOCK_RULE },
-        { id: 'core3', name: 'Side Plank — Big 3 #3 (knees → full)', demo: 'sidePlankKnees', demoAlt: 'sidePlankFull', sets: 3, reps: [4, 6], unit: 'holds/side', perLabel: '7–10 sec each · pyramid', tempo: 'Hold 7–10 sec', rest: REST.core,
-          cues: ['Elbow under shoulder', 'Lift hips — straight line', 'Short perfect holds beat one long shaky hold'], feel: 'Side of the trunk.', wrong: 'Hips sagging or rolling forward.', unlock: UNLOCK_RULE },
-        { id: 'core4', name: 'Standing Hip Hinge — Wall Check, No Load', demo: 'hipHinge', sets: 3, reps: [8, 12], unit: 'reps', tempo: '2 sec back · stand', rest: REST.hinge,
-          cues: ['Wall about a foot behind you', 'Hips back until your butt lightly taps the wall', 'Flat back — stop the moment it wants to round'], feel: 'Hamstring stretch, flat back. No weight is ever added in this plan.', wrong: 'Back rounding.', unlock: UNLOCK_RULE },
-        { id: 'core5', name: 'Front Plank Pyramid — Short Perfect Holds', demo: 'frontPlank', sets: 3, reps: [6, 6], unit: 'holds', perLabel: '10-sec holds, breathe between', tempo: 'Hold 10 sec', rest: REST.core,
-          cues: ['Forearms down, elbows under shoulders', 'One line head → heels', 'Add holds, never hold time'], feel: 'Whole trunk bracing. Never at the cost of neutral spine.', wrong: 'Hips sagging, low back arching.', unlock: 'Top of the core ladder' },
+        { id: 'glute1', name: 'Single-Leg Bridge — Kickstand', demo: 'kickstandBridge', sets: 3, reps: [6, 10], unit: 'reps/side', perLabel: '2-sec squeeze', tempo: '1 sec up · 2 sec squeeze · 2 sec down', rest: REST.hinge,
+          cues: ['Working foot flat under the knee', 'Other heel lightly on the floor — just for balance', 'Hips up level, ribs down'], feel: 'Mostly the working-side glute.', wrong: 'Hips tilting, or pushing through the helper foot.', unlock: 'Top of the range on every set, 2 sessions in a row, “just right” or “too easy”, clean form, green pain' },
+        { id: 'glute2', name: 'Single-Leg Bridge', demo: 'singleLegBridge', sets: 3, reps: [6, 12], unit: 'reps/side', perLabel: '2-sec hold at top', tempo: '1 sec up · 2 sec hold · 2 sec down', rest: REST.hinge,
+          cues: ['Other knee pulled up (or leg straight)', 'Drive through the heel, hips level', 'No arching at the top'], feel: 'Glute + hamstring, one side.', wrong: 'Hip on the free side dropping.', unlock: 'Top of the range on every set, 2 sessions in a row, “just right” or “too easy”, clean form, green pain' },
+        { id: 'glute3', name: 'Single-Leg Bridge — Slow Lower + Hold', demo: 'singleLegBridge', sets: 3, reps: [6, 10], unit: 'reps/side', perLabel: '3-sec lower + 20-sec hold on the last rep', tempo: '1 sec up · 3 sec down', rest: REST.hinge,
+          cues: ['Same as single-leg bridge', 'Lower over 3 seconds', 'Last rep: hold 20 sec at the top'], feel: 'Deep glute burn. Pain-free low back.', wrong: 'Low back takes over.', unlock: 'Top of the home glute ladder' },
       ],
     },
     power: {
@@ -108,8 +104,27 @@
     },
   };
 
+
+  // Big 3 block: done every Day A and Day B, short perfect holds.
+  const BIG3 = [
+        { id: 'core1', name: 'Bird Dog — Big 3 #1', demo: 'birdDog', sets: 3, reps: [6, 8], unit: 'reps/side', perLabel: '7–10 sec holds · pyramid 6-4-2', tempo: 'Reach · hold 7–10 sec · return', rest: REST.core, sub: 'Dead bug if balance fails.',
+          cues: ['Hands under shoulders, knees under hips', 'Reach long, not high', 'Hips level — hold'], feel: 'Glute + back of shoulder.', wrong: 'Leg too high, low back arches.', unlock: UNLOCK_RULE },
+        { id: 'core2', name: 'Modified Curl-Up — Big 3 #2', demo: 'curlUp', sets: 3, reps: [6, 8], unit: 'reps/side', perLabel: '7–10 sec holds · pyramid 6-4-2', tempo: 'Lift a little · hold 7–10 sec', rest: REST.core, sub: 'Dead bug if it bothers your back.',
+          cues: ['One knee bent, hands under low back (sensors)', 'Lift only head + shoulders, a little', 'Neck still — this is NOT a crunch'], feel: 'Front abs bracing. Hands feel the low back stay still.', wrong: 'Curling up high like a crunch.', unlock: UNLOCK_RULE },
+        { id: 'core3', name: 'Side Plank — Big 3 #3 (knees → full)', demo: 'sidePlankKnees', demoAlt: 'sidePlankFull', sets: 3, reps: [4, 6], unit: 'holds/side', perLabel: '7–10 sec each · pyramid', tempo: 'Hold 7–10 sec', rest: REST.core,
+          cues: ['Elbow under shoulder', 'Lift hips — straight line', 'Short perfect holds beat one long shaky hold'], feel: 'Side of the trunk.', wrong: 'Hips sagging or rolling forward.', unlock: UNLOCK_RULE },
+  ];
+  BIG3.forEach((b) => { b.kind = 'big3'; b.unlock = b.id === 'core3' ? 'Knees → full side plank once 6 clean 10-sec holds per side feel “just right”, 2 sessions in a row' : 'Add holds before seconds: build to 3 sets of 6-4-2 reps with 8–10 sec holds'; });
+  const EXTRAS = [
+        { id: 'core4', name: 'Standing Hip Hinge — Wall Check, No Load', demo: 'hipHinge', sets: 3, reps: [8, 12], unit: 'reps', tempo: '2 sec back · stand', rest: REST.hinge,
+          cues: ['Wall about a foot behind you', 'Hips back until your butt lightly taps the wall', 'Flat back — stop the moment it wants to round'], feel: 'Hamstring stretch, flat back. No weight is ever added in this plan.', wrong: 'Back rounding.', unlock: UNLOCK_RULE },
+        { id: 'core5', name: 'Front Plank Pyramid — Short Perfect Holds', demo: 'frontPlank', sets: 3, reps: [6, 6], unit: 'holds', perLabel: '10-sec holds, breathe between', tempo: 'Hold 10 sec', rest: REST.core,
+          cues: ['Forearms down, elbows under shoulders', 'One line head → heels', 'Add holds, never hold time'], feel: 'Whole trunk bracing. Never at the cost of neutral spine.', wrong: 'Hips sagging, low back arching.', unlock: 'Top of the core ladder' },
+  ];
+  EXTRAS.forEach((b) => { b.kind = 'extra'; });
   const EX = {}; // id -> exercise (ladder steps + others)
   for (const k in LADDERS) LADDERS[k].steps.forEach((s, i) => { s.ladder = k; s.step = i; EX[s.id] = s; });
+  BIG3.concat(EXTRAS).forEach((b) => { EX[b.id] = b; });
 
   const TENDON = [
     { id: 'tHalf', name: 'Half-Squat Hold', demo: 'halfSquatHold', tendon: 'Knee (patellar) tendon', sets: 3, reps: [30, 45], unit: 'sec', tempo: 'Hold at a hard effort', rest: REST.tHold, cues: ['Sit halfway down', 'Knees over toes, back flat', 'Hold 30–45 sec'], feel: 'Thighs working hard. Pain ≤3/10.', wrong: 'Knees caving in.' },
@@ -147,17 +162,18 @@
   const FOOTWORK = { id: 'fw', name: 'Footwork: Step-Drag + Shuffle', demo: 'footwork', kind: 'reaction', dose: 'Practice in short rounds', rest: REST.react, cues: ['Stance a little wider than shoulders, one foot slightly forward', 'Forward: front foot first. Back: back foot first', 'Feet never cross · turn by stepping, never twisting the spine'] };
   EX.fw = FOOTWORK;
   const SUBS = [
-    { id: 'subDoor', name: 'Doorway Pull (no safe table)', demo: 'doorwayPull', dose: 'Hold 10–20 sec × 4–5', cues: ['Hold both sides of a door frame', 'Lean back with a straight body', 'Pull hard and hold'], rest: REST.gen, kind: 'sub' },
+    { id: 'subDoor', name: 'Doorway Pull Hold', demo: 'doorwayPull', sets: 4, reps: [10, 20], unit: 'sec', tempo: 'Pull hard · hold', tendon: 'Real pull for lats + upper back', dose: 'Hold 10–20 sec × 4–5', cues: ['Hold both sides of a door frame', 'Lean back with a straight body', 'Pull hard and hold'], rest: REST.gen, kind: 'sub' },
     { id: 'subBug', name: 'Dead Bug (bird dog / curl-up substitute)', demo: 'deadBug', dose: '3 × 6–8 / side', cues: ['Arms up, knees over hips', 'Reach opposite arm + leg slowly', 'Low back stays on the mat'], rest: REST.core, kind: 'sub' },
   ];
   SUBS.forEach((s) => { EX[s.id] = s; });
 
   const DAYS = {
-    // Power goes first (fresh legs = fast reps); tendon block last.
-    A: { name: 'Push + Legs + Big 3', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'legs' }, { lad: 'core' }, { ex: 'tHalf' }] },
-    B: { name: 'Pull + Hinge + Core', items: [{ lad: 'power' }, { lad: 'pull' }, { lad: 'legs' }, { lad: 'core' }, { ex: 'tY' }] },
-    C: { name: 'Full Body + Mobility', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'pull' }, { lad: 'legs' }, { flow: true }] },
+    // Power first (fresh), then main ladders, Big 3 block, tendon block last.
+    A: { name: 'Push + Legs + Glutes + Big 3', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }, { ex: 'tCalf' }] },
+    B: { name: 'Pull + Legs + Glutes + Big 3', items: [{ lad: 'power' }, { lad: 'pull' }, { ex: 'subDoor' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }, { ex: 'tY' }] },
+    C: { name: 'Full Body + Mobility', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'pull' }, { ex: 'subDoor' }, { lad: 'legs' }, { ex: 'tHalf' }, { flow: true }] },
   };
+
 
   const VARIATIONS = [
     ['Horizontal push', 'Wall push-up → incline push-up (high → low) → floor push-up → feet-elevated → archer. Wrist pain: fists or hands on a step. Shoulder pain: narrower hands, shorter range, incline only.'],
@@ -191,5 +207,5 @@
     ['Between sessions', '48 hours · non-consecutive days · 3× per week'],
   ];
 
-  window.PLAN = { REST, LADDERS, EX, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
+  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
 })();
