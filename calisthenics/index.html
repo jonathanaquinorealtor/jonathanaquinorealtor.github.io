@@ -192,6 +192,8 @@ td { color: var(--muted); }
 .setup { font-size: 15px; margin: 10px 0 4px; color: var(--text); }
 .setup b { color: var(--teal); }
 .swapnote { margin: 18px 0 -8px; font-size: 13px; color: var(--teal); }
+.breath { font-size: 15px; color: var(--muted); margin: 4px 0; }
+.breath b { color: var(--text); }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--teal); color: var(--teal-ink); font-weight: 700; padding: 12px 18px; border-radius: 12px; z-index: 50; max-width: calc(100% - 32px); }
 /* player */
 #player { position: fixed; inset: 0; z-index: 40; background: rgba(0, 3, 8, 0.92); display: grid; place-items: center; padding: calc(10px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
@@ -1993,13 +1995,28 @@ td { color: var(--muted); }
   // Rib-safe swaps: used while "No lying face down" is on (rib pain when prone).
   const RIBSAFE = [
     { id: 'qYT', name: 'All-Fours Y-T Raise', demo: 'quadYT', sets: 3, reps: [6, 10], unit: 'reps', perLabel: 'per letter, each arm', tempo: 'Lift 2 sec · hold 2–5 sec · lower 3 sec', rest: REST.gen, tendon: 'Shoulder blades, no chest pressure', kind: 'sub',
-      cues: ['Shoulder blade back + down first, then lift', 'Y: arm up + out, thumb up · T: arm straight out to the side', 'One set = Y then T, each arm'], feel: 'Between your spine and shoulder blade. Not your neck.', wrong: 'Trunk twisting to lift higher.' },
+      cues: ['Shoulder blade back + down first, then lift', 'Y: arm up + out, thumb up · T: arm straight out to the side', 'Burn in the FRONT of the shoulder? Lower the arm a little, thumb to the ceiling, don’t shrug', 'One set = Y then T, each arm'], feel: 'Between your spine and shoulder blade. Not the front of the shoulder, not your neck.', wrong: 'Trunk twisting to lift higher.' },
     { id: 'qYH', name: 'All-Fours Y Hold', demo: 'quadYHold', sets: 3, reps: [10, 15], unit: 'sec', perLabel: 'each arm', tempo: 'Hold', rest: REST.tSlow, tendon: 'Shoulder + upper-back tendons', kind: 'tendon',
-      cues: ['On all fours, back flat', 'One arm up in a Y, thumb up', 'Hold 10–15 sec, switch'], feel: 'Upper back and back of the shoulder.', wrong: 'Hips tilting or low back sagging.' },
+      cues: ['On all fours, back flat', 'Pull the shoulder blade back + down first, then lift the arm in a Y, thumb up', 'Front of the shoulder burning? Arm a bit lower, don’t shrug', 'Hold 10–15 sec, switch'], feel: 'Upper back and the back of the shoulder — not the front.', wrong: 'Hips tilting or low back sagging.' },
     { id: 'qTR', name: 'All-Fours Thoracic Rotation', demo: 'quadThoracic', dose: '5–8 slow reps / side', kind: 'mobility', rest: REST.mob,
       cues: ['Hand behind your head', 'Rotate the elbow up to the ceiling', 'Hips stay still — only the upper back turns'] },
   ];
   RIBSAFE.forEach((s) => { EX[s.id] = s; });
+  // Easier / safer alternatives the app swaps in automatically when a move isn't working
+  // (red pain, or not done / too hard two sessions in a row). Restore any swap in Me.
+  EX.core3e = { id: 'core3e', name: 'Side Plank — Short Holds (knees, elbow padded)', demo: 'sidePlankKnees', sets: 3, reps: [3, 5], unit: 'holds/side', perLabel: '3–5 sec each', tempo: 'Hold 3–5 sec', rest: REST.core, kind: 'big3',
+    cues: ['Folded towel under the elbow', 'Elbow right under the shoulder — not out in front', 'Short 3–5 sec holds; build to 7–10 sec'], feel: 'Side of the trunk. Some shoulder burn is normal; elbow pain is not.', wrong: 'Elbow out in front of the shoulder, hips sagging.', unlock: 'Back to the regular knee side plank once 5 holds/side of 5 sec feel “just right”, 2 sessions in a row' };
+  EX.subBug.kind = 'big3'; EX.subBug.sets = 3; EX.subBug.reps = [6, 8]; EX.subBug.unit = 'reps/side'; EX.subBug.tempo = 'Slow reach · 2 sec pause';
+  const ALT = { core1: 'subBug', core2: 'subBug', core3: 'core3e', core3e: 'subBug', qYT: 'subDoor', qYH: 'subDoor', tCalf: 'tSplit', tHalf: 'tSplit', tSplit: 'tBridge', pull0: 'subDoor', legs0: 'tBridge' };
+  // Breathing, by kind of move
+  const BREATH = {
+    reps: 'Breathe in on the way down, out as you push or stand up. Never hold your breath.',
+    hold: 'Slow, steady breaths through the hold — brace the belly, but keep breathing.',
+    big3: 'Brace like someone is about to poke your belly, then keep breathing behind the brace.',
+    power: 'Short sharp breath out as you move fast.',
+    mobility: 'Slow breaths. Breathe out as you ease into the stretch.',
+  };
+  const breathFor = (ex) => ex.kind === 'mobility' ? BREATH.mobility : ex.kind === 'big3' ? BREATH.big3 : ex.ladder === 'power' ? BREATH.power : /sec|holds/.test(ex.unit || '') || /Hold/.test(ex.name) ? BREATH.hold : BREATH.reps;
   const PRONE_SWAP = { pull0: 'qYT', pull2: 'subDoor', pull4: 'subDoor', pull5: 'subDoor', pull6: 'subDoor', tY: 'qYH', m7: 'qTR' };
 
   const DAYS = {
@@ -2042,7 +2059,7 @@ td { color: var(--muted); }
     ['Between sessions', '48 hours · non-consecutive days · 3× per week'],
   ];
 
-  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, RIBSAFE, PRONE_SWAP, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
+  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, RIBSAFE, PRONE_SWAP, ALT, breathFor, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
 })();
 
 </script>
@@ -2125,7 +2142,12 @@ td { color: var(--muted); }
   const changesSorted = () => Object.entries(S.data.changes).map(([id, c]) => Object.assign({ id }, c)).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   function weekNum() { const p = profile(); const st = (p && p.start) || '2026-11-19'; return Math.floor(daysBetween(st, todayStr()) / 7) + 1; }
   const noProne = () => !!(profile() && profile().noProne);
-  const swapEx = (ex) => (noProne() && P.PRONE_SWAP[ex.id] ? P.EX[P.PRONE_SWAP[ex.id]] : ex);
+  const userSwaps = () => (profile() && profile().swaps) || {};
+  const swapEx = (ex) => {
+    let e = ex, guard = 0;
+    while (guard++ < 4) { const s = userSwaps()[e.id]; if (s && P.EX[s.to]) e = P.EX[s.to]; else break; }
+    return noProne() && P.PRONE_SWAP[e.id] ? P.EX[P.PRONE_SWAP[e.id]] : e;
+  };
   // The day's exercises in order, with rib-safe swaps applied and duplicates removed.
   function dayList(day) {
     const out = []; const seen = new Set();
@@ -2257,7 +2279,7 @@ td { color: var(--muted); }
     const cap = (t) => t.toLowerCase().replace(/(^|[·-]\s*)([a-z])/g, (m, p, c) => p + c.toUpperCase());
     return '<p class="setup"><b>Setup:</b> ' + n.setup.map((t) => esc(cap(t))).join(' · ') + '</p>';
   }
-  function cueList(ex) { return setupLine(ex) + '<ul class="cues">' + (ex.cues || []).map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>'; }
+  function cueList(ex) { return setupLine(ex) + '<ul class="cues">' + (ex.cues || []).map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul><p class="breath"><b>Breathing:</b> ' + esc(P.breathFor(ex)) + '</p>'; }
   function doseLine(ex) {
     if (ex.dose) return esc(ex.dose);
     const sl = ex.setsLabel || ex.sets;
@@ -2508,7 +2530,7 @@ td { color: var(--muted); }
     for (const e of entries) {
       if (e.completed === false) { msgs.push((P.EX[e.ex] ? P.EX[e.ex].name : 'That move') + ': not done today — no change to your level. Same plan next time.' + (/sick|nause|dizz|light/i.test(e.note || '') ? ' Feeling sick is a stop signal, not a fail: eat a light snack 1–2 h before training, sip water, and stop if it comes back.' : '')); continue; }
       if (!e.ladder) {
-        if (e.pain >= 6) msgs.push(P.EX[e.ex] ? P.EX[e.ex].name + ': pain ' + e.pain + '/10 is RED. Drop it this week; tendon work must stay ≤3/10 and be back to baseline by the next morning.' : 'Pain was high — rest that area.');
+        if (e.pain >= 6) { const ex0 = P.EX[e.ex]; msgs.push((ex0 ? ex0.name : 'That move') + ': pain ' + e.pain + '/10 is RED.' + (ex0 && ex0.kind === 'tendon' ? ' Tendon work must stay ≤3/10 and be back to baseline by the next morning.' : '') + ' Leg weakness, numbness or pain down the leg: stop and get checked.'); }
         else if (e.pain >= 4) msgs.push((P.EX[e.ex] ? P.EX[e.ex].name : 'Mobility') + ': pain ' + e.pain + '/10 is AMBER. Hold the same hold time next session.');
         else if (P.EX[e.ex] && P.EX[e.ex].kind === 'tendon' && e.sets.every((v) => v >= P.EX[e.ex].reps[1]) && e.rating === 'easy') msgs.push(P.EX[e.ex].name + ': easy at the top time. Make it harder (single-leg or a new angle), not longer. Progress tendon load only ~5–10% per week.');
         continue;
@@ -2521,6 +2543,19 @@ td { color: var(--muted); }
       if (r.newStep !== from) upd.history.push({ date: todayStr(), from, to: r.newStep, dir: r.newStep > from ? 'up' : 'down', why: r.msgs[0] });
       ladderUpdates[e.ladder] = upd;
     }
+    // Not working? Swap it automatically: red pain now, or not done / too hard two sessions in a row.
+    const swaps = Object.assign({}, userSwaps()); let swapped = false;
+    for (const e of entries) {
+      const to = P.ALT[e.ex]; if (!to || swaps[e.ex] || !P.EX[to]) continue;
+      if (e.ladder && stepOf(e.ladder) > 0) continue; // ladders step down instead; only swap at the first step
+      const prev = entriesFor((x) => x.ex === e.ex).pop();
+      const bad = (x) => x && (x.completed === false || x.rating === 'hard' || x.form === false);
+      let why = null;
+      if ((e.pain || 0) >= 6) why = 'pain ' + e.pain + '/10';
+      else if (bad(e) && bad(prev)) why = (e.completed === false ? 'couldn’t do it' : 'too hard') + ' two sessions in a row';
+      if (why) { swaps[e.ex] = { to, date: todayStr(), why }; swapped = true; msgs.push(P.EX[e.ex].name + ' isn’t working (' + why + '), so next time it’s swapped for ' + P.EX[to].name + '. You can restore it in Me.'); }
+    }
+    if (swapped) await put('plan', 'profile', Object.assign({}, profile() || {}, { swaps }));
     await put('logs', id, { date: todayStr(), day, title: 'Day ' + day + ' — ' + DY.name, entries, createdAt: at, deload: inDeload() });
     for (const k in ladderUpdates) await put('ladders', k, ladderUpdates[k]);
     let i = 0;
@@ -2671,6 +2706,8 @@ td { color: var(--muted); }
       h += '</article>';
     }
     h += '</section>';
+    const sw = userSwaps(); const swKeys = Object.keys(sw).filter((k) => P.EX[k] && P.EX[sw[k].to]);
+    h += '<section class="card"><h2>Swapped exercises</h2>' + (swKeys.length ? '<ul class="hist">' + swKeys.map((k) => '<li><b>' + esc(P.EX[k].name) + '</b> → ' + esc(P.EX[sw[k].to].name) + ' (' + esc(sw[k].why) + ', ' + fmtDate(sw[k].date) + ') <button type="button" class="link" data-restore="' + k + '">Restore</button></li>').join('') + '</ul>' : '<p class="fine">None. When a move isn’t working (red pain, or couldn’t do it / too hard twice in a row) the plan swaps in an easier or safer version and tells you why.</p>') + '</section>';
     h += '<section class="card"><h2>No lying face down</h2><p>For rib pain when lying on your stomach. Swaps face-down moves for all-fours or doorway versions. Your Pull level is held while it’s on.</p><label class="formchk"><input id="noprone" type="checkbox" ' + (noProne() ? 'checked' : '') + (S.canWrite ? '' : ' disabled') + '> On</label><p class="fine">Get rib pain checked if it hurts to breathe deeply, one spot is very tender, it followed a fall, or it isn’t better in 1–2 weeks. Chest pain with shortness of breath: get care right away.</p></section>';
     // weight
     const ws = Object.entries(S.data.body).map(([id, b]) => Object.assign({ id }, b)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -2724,6 +2761,7 @@ td { color: var(--muted); }
       await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: why + ' Now Step ' + SN(to) + ': ' + P.LADDERS[k].steps[to].name + '.' });
       confirmMove = null; render(); return;
     }
+    if (t.dataset.restore) { const p = Object.assign({}, profile() || {}); const s = Object.assign({}, p.swaps || {}); const k = t.dataset.restore; delete s[k]; p.swaps = s; await put('plan', 'profile', p); await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: P.EX[k].name + ' restored by you.' }); render(); return; }
     if (t.id === 'saveWalk') { const v = Number($('#walkmin').value); if (!v || v < 1 || v > 300) { toast('Enter minutes walked.'); return; } await put('logs', 'walk' + Date.now(), { type: 'walk', date: todayStr(), minutes: v, title: 'Walk — ' + v + ' min', createdAt: new Date().toISOString(), entries: [] }); toast('Walk saved.'); render(); return; }
     if (t.id === 'saveWt') { const v = Number($('#wt').value); if (!v || v < 80 || v > 500) { toast('Enter your weight in lbs.'); return; } await put('body', 'b' + Date.now(), { date: todayStr(), lbs: v }); $('#wt').value = ''; render(); toast('Weight saved.'); return; }
     if (t.id === 'startDeload') { const p = Object.assign({}, profile() || {}); const until = new Date(Date.now() + 6 * 86400000); p.deloadUntil = until.toISOString().slice(0, 10); p.deloads = (p.deloads || []).concat([todayStr()]); await put('plan', 'profile', p); await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: 'Deload week started: about half the sets, same levels, stop with 4+ reps left.' }); render(); return; }

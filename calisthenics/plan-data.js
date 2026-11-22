@@ -169,13 +169,28 @@
   // Rib-safe swaps: used while "No lying face down" is on (rib pain when prone).
   const RIBSAFE = [
     { id: 'qYT', name: 'All-Fours Y-T Raise', demo: 'quadYT', sets: 3, reps: [6, 10], unit: 'reps', perLabel: 'per letter, each arm', tempo: 'Lift 2 sec · hold 2–5 sec · lower 3 sec', rest: REST.gen, tendon: 'Shoulder blades, no chest pressure', kind: 'sub',
-      cues: ['Shoulder blade back + down first, then lift', 'Y: arm up + out, thumb up · T: arm straight out to the side', 'One set = Y then T, each arm'], feel: 'Between your spine and shoulder blade. Not your neck.', wrong: 'Trunk twisting to lift higher.' },
+      cues: ['Shoulder blade back + down first, then lift', 'Y: arm up + out, thumb up · T: arm straight out to the side', 'Burn in the FRONT of the shoulder? Lower the arm a little, thumb to the ceiling, don’t shrug', 'One set = Y then T, each arm'], feel: 'Between your spine and shoulder blade. Not the front of the shoulder, not your neck.', wrong: 'Trunk twisting to lift higher.' },
     { id: 'qYH', name: 'All-Fours Y Hold', demo: 'quadYHold', sets: 3, reps: [10, 15], unit: 'sec', perLabel: 'each arm', tempo: 'Hold', rest: REST.tSlow, tendon: 'Shoulder + upper-back tendons', kind: 'tendon',
-      cues: ['On all fours, back flat', 'One arm up in a Y, thumb up', 'Hold 10–15 sec, switch'], feel: 'Upper back and back of the shoulder.', wrong: 'Hips tilting or low back sagging.' },
+      cues: ['On all fours, back flat', 'Pull the shoulder blade back + down first, then lift the arm in a Y, thumb up', 'Front of the shoulder burning? Arm a bit lower, don’t shrug', 'Hold 10–15 sec, switch'], feel: 'Upper back and the back of the shoulder — not the front.', wrong: 'Hips tilting or low back sagging.' },
     { id: 'qTR', name: 'All-Fours Thoracic Rotation', demo: 'quadThoracic', dose: '5–8 slow reps / side', kind: 'mobility', rest: REST.mob,
       cues: ['Hand behind your head', 'Rotate the elbow up to the ceiling', 'Hips stay still — only the upper back turns'] },
   ];
   RIBSAFE.forEach((s) => { EX[s.id] = s; });
+  // Easier / safer alternatives the app swaps in automatically when a move isn't working
+  // (red pain, or not done / too hard two sessions in a row). Restore any swap in Me.
+  EX.core3e = { id: 'core3e', name: 'Side Plank — Short Holds (knees, elbow padded)', demo: 'sidePlankKnees', sets: 3, reps: [3, 5], unit: 'holds/side', perLabel: '3–5 sec each', tempo: 'Hold 3–5 sec', rest: REST.core, kind: 'big3',
+    cues: ['Folded towel under the elbow', 'Elbow right under the shoulder — not out in front', 'Short 3–5 sec holds; build to 7–10 sec'], feel: 'Side of the trunk. Some shoulder burn is normal; elbow pain is not.', wrong: 'Elbow out in front of the shoulder, hips sagging.', unlock: 'Back to the regular knee side plank once 5 holds/side of 5 sec feel “just right”, 2 sessions in a row' };
+  EX.subBug.kind = 'big3'; EX.subBug.sets = 3; EX.subBug.reps = [6, 8]; EX.subBug.unit = 'reps/side'; EX.subBug.tempo = 'Slow reach · 2 sec pause';
+  const ALT = { core1: 'subBug', core2: 'subBug', core3: 'core3e', core3e: 'subBug', qYT: 'subDoor', qYH: 'subDoor', tCalf: 'tSplit', tHalf: 'tSplit', tSplit: 'tBridge', pull0: 'subDoor', legs0: 'tBridge' };
+  // Breathing, by kind of move
+  const BREATH = {
+    reps: 'Breathe in on the way down, out as you push or stand up. Never hold your breath.',
+    hold: 'Slow, steady breaths through the hold — brace the belly, but keep breathing.',
+    big3: 'Brace like someone is about to poke your belly, then keep breathing behind the brace.',
+    power: 'Short sharp breath out as you move fast.',
+    mobility: 'Slow breaths. Breathe out as you ease into the stretch.',
+  };
+  const breathFor = (ex) => ex.kind === 'mobility' ? BREATH.mobility : ex.kind === 'big3' ? BREATH.big3 : ex.ladder === 'power' ? BREATH.power : /sec|holds/.test(ex.unit || '') || /Hold/.test(ex.name) ? BREATH.hold : BREATH.reps;
   const PRONE_SWAP = { pull0: 'qYT', pull2: 'subDoor', pull4: 'subDoor', pull5: 'subDoor', pull6: 'subDoor', tY: 'qYH', m7: 'qTR' };
 
   const DAYS = {
@@ -218,5 +233,5 @@
     ['Between sessions', '48 hours · non-consecutive days · 3× per week'],
   ];
 
-  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, RIBSAFE, PRONE_SWAP, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
+  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, RIBSAFE, PRONE_SWAP, ALT, breathFor, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
 })();

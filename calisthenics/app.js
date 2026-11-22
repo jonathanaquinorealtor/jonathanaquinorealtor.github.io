@@ -76,7 +76,12 @@
   const changesSorted = () => Object.entries(S.data.changes).map(([id, c]) => Object.assign({ id }, c)).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   function weekNum() { const p = profile(); const st = (p && p.start) || '2026-11-19'; return Math.floor(daysBetween(st, todayStr()) / 7) + 1; }
   const noProne = () => !!(profile() && profile().noProne);
-  const swapEx = (ex) => (noProne() && P.PRONE_SWAP[ex.id] ? P.EX[P.PRONE_SWAP[ex.id]] : ex);
+  const userSwaps = () => (profile() && profile().swaps) || {};
+  const swapEx = (ex) => {
+    let e = ex, guard = 0;
+    while (guard++ < 4) { const s = userSwaps()[e.id]; if (s && P.EX[s.to]) e = P.EX[s.to]; else break; }
+    return noProne() && P.PRONE_SWAP[e.id] ? P.EX[P.PRONE_SWAP[e.id]] : e;
+  };
   // The day's exercises in order, with rib-safe swaps applied and duplicates removed.
   function dayList(day) {
     const out = []; const seen = new Set();
@@ -208,7 +213,7 @@
     const cap = (t) => t.toLowerCase().replace(/(^|[·-]\s*)([a-z])/g, (m, p, c) => p + c.toUpperCase());
     return '<p class="setup"><b>Setup:</b> ' + n.setup.map((t) => esc(cap(t))).join(' · ') + '</p>';
   }
-  function cueList(ex) { return setupLine(ex) + '<ul class="cues">' + (ex.cues || []).map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>'; }
+  function cueList(ex) { return setupLine(ex) + '<ul class="cues">' + (ex.cues || []).map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul><p class="breath"><b>Breathing:</b> ' + esc(P.breathFor(ex)) + '</p>'; }
   function doseLine(ex) {
     if (ex.dose) return esc(ex.dose);
     const sl = ex.setsLabel || ex.sets;
@@ -459,7 +464,7 @@
     for (const e of entries) {
       if (e.completed === false) { msgs.push((P.EX[e.ex] ? P.EX[e.ex].name : 'That move') + ': not done today — no change to your level. Same plan next time.' + (/sick|nause|dizz|light/i.test(e.note || '') ? ' Feeling sick is a stop signal, not a fail: eat a light snack 1–2 h before training, sip water, and stop if it comes back.' : '')); continue; }
       if (!e.ladder) {
-        if (e.pain >= 6) msgs.push(P.EX[e.ex] ? P.EX[e.ex].name + ': pain ' + e.pain + '/10 is RED. Drop it this week; tendon work must stay ≤3/10 and be back to baseline by the next morning.' : 'Pain was high — rest that area.');
+        if (e.pain >= 6) { const ex0 = P.EX[e.ex]; msgs.push((ex0 ? ex0.name : 'That move') + ': pain ' + e.pain + '/10 is RED.' + (ex0 && ex0.kind === 'tendon' ? ' Tendon work must stay ≤3/10 and be back to baseline by the next morning.' : '') + ' Leg weakness, numbness or pain down the leg: stop and get checked.'); }
         else if (e.pain >= 4) msgs.push((P.EX[e.ex] ? P.EX[e.ex].name : 'Mobility') + ': pain ' + e.pain + '/10 is AMBER. Hold the same hold time next session.');
         else if (P.EX[e.ex] && P.EX[e.ex].kind === 'tendon' && e.sets.every((v) => v >= P.EX[e.ex].reps[1]) && e.rating === 'easy') msgs.push(P.EX[e.ex].name + ': easy at the top time. Make it harder (single-leg or a new angle), not longer. Progress tendon load only ~5–10% per week.');
         continue;
@@ -472,6 +477,19 @@
       if (r.newStep !== from) upd.history.push({ date: todayStr(), from, to: r.newStep, dir: r.newStep > from ? 'up' : 'down', why: r.msgs[0] });
       ladderUpdates[e.ladder] = upd;
     }
+    // Not working? Swap it automatically: red pain now, or not done / too hard two sessions in a row.
+    const swaps = Object.assign({}, userSwaps()); let swapped = false;
+    for (const e of entries) {
+      const to = P.ALT[e.ex]; if (!to || swaps[e.ex] || !P.EX[to]) continue;
+      if (e.ladder && stepOf(e.ladder) > 0) continue; // ladders step down instead; only swap at the first step
+      const prev = entriesFor((x) => x.ex === e.ex).pop();
+      const bad = (x) => x && (x.completed === false || x.rating === 'hard' || x.form === false);
+      let why = null;
+      if ((e.pain || 0) >= 6) why = 'pain ' + e.pain + '/10';
+      else if (bad(e) && bad(prev)) why = (e.completed === false ? 'couldn’t do it' : 'too hard') + ' two sessions in a row';
+      if (why) { swaps[e.ex] = { to, date: todayStr(), why }; swapped = true; msgs.push(P.EX[e.ex].name + ' isn’t working (' + why + '), so next time it’s swapped for ' + P.EX[to].name + '. You can restore it in Me.'); }
+    }
+    if (swapped) await put('plan', 'profile', Object.assign({}, profile() || {}, { swaps }));
     await put('logs', id, { date: todayStr(), day, title: 'Day ' + day + ' — ' + DY.name, entries, createdAt: at, deload: inDeload() });
     for (const k in ladderUpdates) await put('ladders', k, ladderUpdates[k]);
     let i = 0;
@@ -622,6 +640,8 @@
       h += '</article>';
     }
     h += '</section>';
+    const sw = userSwaps(); const swKeys = Object.keys(sw).filter((k) => P.EX[k] && P.EX[sw[k].to]);
+    h += '<section class="card"><h2>Swapped exercises</h2>' + (swKeys.length ? '<ul class="hist">' + swKeys.map((k) => '<li><b>' + esc(P.EX[k].name) + '</b> → ' + esc(P.EX[sw[k].to].name) + ' (' + esc(sw[k].why) + ', ' + fmtDate(sw[k].date) + ') <button type="button" class="link" data-restore="' + k + '">Restore</button></li>').join('') + '</ul>' : '<p class="fine">None. When a move isn’t working (red pain, or couldn’t do it / too hard twice in a row) the plan swaps in an easier or safer version and tells you why.</p>') + '</section>';
     h += '<section class="card"><h2>No lying face down</h2><p>For rib pain when lying on your stomach. Swaps face-down moves for all-fours or doorway versions. Your Pull level is held while it’s on.</p><label class="formchk"><input id="noprone" type="checkbox" ' + (noProne() ? 'checked' : '') + (S.canWrite ? '' : ' disabled') + '> On</label><p class="fine">Get rib pain checked if it hurts to breathe deeply, one spot is very tender, it followed a fall, or it isn’t better in 1–2 weeks. Chest pain with shortness of breath: get care right away.</p></section>';
     // weight
     const ws = Object.entries(S.data.body).map(([id, b]) => Object.assign({ id }, b)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -675,6 +695,7 @@
       await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: why + ' Now Step ' + SN(to) + ': ' + P.LADDERS[k].steps[to].name + '.' });
       confirmMove = null; render(); return;
     }
+    if (t.dataset.restore) { const p = Object.assign({}, profile() || {}); const s = Object.assign({}, p.swaps || {}); const k = t.dataset.restore; delete s[k]; p.swaps = s; await put('plan', 'profile', p); await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: P.EX[k].name + ' restored by you.' }); render(); return; }
     if (t.id === 'saveWalk') { const v = Number($('#walkmin').value); if (!v || v < 1 || v > 300) { toast('Enter minutes walked.'); return; } await put('logs', 'walk' + Date.now(), { type: 'walk', date: todayStr(), minutes: v, title: 'Walk — ' + v + ' min', createdAt: new Date().toISOString(), entries: [] }); toast('Walk saved.'); render(); return; }
     if (t.id === 'saveWt') { const v = Number($('#wt').value); if (!v || v < 80 || v > 500) { toast('Enter your weight in lbs.'); return; } await put('body', 'b' + Date.now(), { date: todayStr(), lbs: v }); $('#wt').value = ''; render(); toast('Weight saved.'); return; }
     if (t.id === 'startDeload') { const p = Object.assign({}, profile() || {}); const until = new Date(Date.now() + 6 * 86400000); p.deloadUntil = until.toISOString().slice(0, 10); p.deloads = (p.deloads || []).concat([todayStr()]); await put('plan', 'profile', p); await put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: 'Deload week started: about half the sets, same levels, stop with 4+ reps left.' }); render(); return; }
