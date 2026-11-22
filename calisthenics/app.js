@@ -75,6 +75,23 @@
   }
   const changesSorted = () => Object.entries(S.data.changes).map(([id, c]) => Object.assign({ id }, c)).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   function weekNum() { const p = profile(); const st = (p && p.start) || '2026-11-19'; return Math.floor(daysBetween(st, todayStr()) / 7) + 1; }
+  const noProne = () => !!(profile() && profile().noProne);
+  const swapEx = (ex) => (noProne() && P.PRONE_SWAP[ex.id] ? P.EX[P.PRONE_SWAP[ex.id]] : ex);
+  // The day's exercises in order, with rib-safe swaps applied and duplicates removed.
+  function dayList(day) {
+    const out = []; const seen = new Set();
+    for (const it of P.DAYS[day].items) {
+      if (it.flow) { out.push({ flow: true }); continue; }
+      const list = it.big3 ? P.BIG3.map((b) => ({ ex: b, big3: true })) : [{ ex: it.lad ? curEx(it.lad) : P.EX[it.ex] }];
+      for (const x of list) {
+        const ex = swapEx(x.ex); if (seen.has(ex.id)) continue; seen.add(ex.id);
+        // carry anything already typed on the original card over to the swapped one
+        if (ex !== x.ex && draft.items && draft.items[x.ex.id] && !draft.items[ex.id]) { draft.items[ex.id] = draft.items[x.ex.id]; saveDraft(); }
+        out.push({ ex, big3: x.big3, swapped: ex !== x.ex, orig: x.ex });
+      }
+    }
+    return out;
+  }
   function inDeload() { const p = profile(); return !!(p && p.deloadUntil && p.deloadUntil >= todayStr()); }
   function suggestDay() {
     const ls = logsSorted().filter((l) => l.day);
@@ -246,11 +263,13 @@
     else { const recent = changesSorted().slice(0, 3); if (recent.length) h += changedCard(recent.map((c) => c.text), 'Recent changes', false); }
     h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li><li>Rough day? 1–2 sets still count — beginners gain almost as much from fewer sets.</li><li>Very sore muscles (normal 1–3 days after)? Skip the fast and heavy moves for that area, do the rest, and take an easy walk. Dark urine or swollen, very tender muscles: get checked the same day.</li></ul></section>';
     h += '<div class="warm"><b>Warm-up</b> Mobility Flow 1–5 (about 5 min) <a href="#mobility">Open flow</a></div>';
-    let n = 0;
-    DY.items.forEach((it) => {
+    let n = 0, big3Head = false;
+    if (noProne()) h += '<div class="alert teal">No lying face down is on (rib pain): face-down moves are swapped for all-fours or doorway versions. Your Pull level is held. Turn it off in Me when your ribs feel fine.</div>';
+    dayList(day).forEach((it) => {
       if (it.flow) { h += flowCard(n++); return; }
-      if (it.big3) { h += '<div class="blockhead"><b>Big 3 core block</b> short perfect holds · 30 sec rest</div>'; P.BIG3.forEach((b) => { h += exCard(b, ++n); }); return; }
-      h += exCard(it.lad ? curEx(it.lad) : P.EX[it.ex], ++n);
+      if (it.big3 && !big3Head) { big3Head = true; h += '<div class="blockhead"><b>Big 3 core block</b> short perfect holds · 30 sec rest</div>'; }
+      if (it.swapped) h += '<div class="swapnote">Swapped for ' + esc(it.orig.name) + ' (no lying face down)</div>';
+      h += exCard(it.ex, ++n);
     });
     h += walkCard();
     h += '<div class="finish"><button type="button" id="finish" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Finish workout + save</button><p class="fine">Saves your sets, ratings and pain. The plan then adapts: pain first, then form, then reps and feedback.</p></div>';
@@ -326,7 +345,7 @@
   function flowCard(i) {
     const d = D('flow');
     let h = '<article class="card ex" data-ex="flow"><div class="ex-top"><span class="num">' + (i + 1) + '</span><div class="ex-head"><div class="tag">MOBILITY</div><h3>Full Mobility Flow</h3><div class="dose">About 10 minutes · 10 moves</div></div></div>';
-    h += '<ol class="flowlist">' + P.MOBILITY.map((m) => '<li><span>' + esc(m.name) + ' <em>' + esc(m.dose) + '</em></span>' + demoBtn(m.id, 'Watch') + '</li>').join('') + '</ol>';
+    h += '<ol class="flowlist">' + P.MOBILITY.map((m) => swapEx(m)).map((m) => '<li><span>' + esc(m.name) + ' <em>' + esc(m.dose) + '</em></span>' + demoBtn(m.id, 'Watch') + '</li>').join('') + '</ol>';
     h += restChips(P.REST.mob);
     h += '<div class="logbox"><div class="rate">' + [['easy', 'Too easy'], ['right', 'Just right'], ['hard', 'Too hard']].map(([k, t]) => '<button type="button" data-rate="' + k + '" class="' + (d.rating === k ? 'on ' + k : '') + '">' + t + '</button>').join('') + '</div>';
     const pv = d.pain == null ? 0 : d.pain;
@@ -421,8 +440,7 @@
     const day = selDay || suggestDay();
     const DY = P.DAYS[day];
     const entries = [];
-    const flat = [];
-    for (const it of DY.items) { if (it.big3) P.BIG3.forEach((b) => flat.push({ ex: b.id })); else flat.push(it); }
+    const flat = dayList(day).map((x) => (x.flow ? { flow: true } : { ex: x.ex.id }));
     for (const it of flat) {
       if (it.flow) { const d = D('flow'); if (d.done || d.rating) entries.push({ ex: 'flow', kind: 'mobility', rating: d.rating || null, pain: d.pain || 0 }); continue; }
       const ex = it.lad ? curEx(it.lad) : P.EX[it.ex];
@@ -471,6 +489,7 @@
     h += backRulesCard();
     for (const k of ['push', 'pull', 'legs', 'core']) h += ladderSection(k);
     h += '<section class="block"><h2>Big 3 core block</h2><p class="fine">Every Day A and B. Short holds of 8–10 sec, descending reps (6-4-2), 2–3 sets. Low spine load: the curl-up gave the best ratio of ab work to spine compression in McGill’s lab tests. Good, not magic — a Cochrane review found this kind of core work isn’t better than other exercise for back pain.</p>' + P.BIG3.map((b) => miniCard(b)).join('') + '</section>';
+    h += '<section class="block"><h2>Rib-safe swaps</h2><p class="fine">Used while “No lying face down” is on.</p>' + P.RIBSAFE.map((b) => miniCard(b)).join('') + '</section>';
     h += '<section class="block"><h2>Extras</h2><p class="fine">The wall-check hinge is now part of the warm-up (Mobility Flow #2). The front plank pyramid is optional core work on Day C or off days.</p>' + P.EXTRAS.map((b) => miniCard(b)).join('') + '</section>';
     h += '<section class="block"><h2>Substitutes</h2>' + P.SUBS.map((s) => miniCard(s)).join('') + '</section>';
     h += '<section class="block"><h2>Swap options by pattern</h2><p class="fine">Easier → standard → harder. Use when a move hurts, doesn’t suit you, or stalls.</p>' + P.VARIATIONS.map(([t, d]) => '<details><summary>' + esc(t) + '</summary><p>' + esc(d) + '</p></details>').join('') + '</section>';
@@ -603,6 +622,7 @@
       h += '</article>';
     }
     h += '</section>';
+    h += '<section class="card"><h2>No lying face down</h2><p>For rib pain when lying on your stomach. Swaps face-down moves for all-fours or doorway versions. Your Pull level is held while it’s on.</p><label class="formchk"><input id="noprone" type="checkbox" ' + (noProne() ? 'checked' : '') + (S.canWrite ? '' : ' disabled') + '> On</label><p class="fine">Get rib pain checked if it hurts to breathe deeply, one spot is very tender, it followed a fall, or it isn’t better in 1–2 weeks. Chest pain with shortness of breath: get care right away.</p></section>';
     // weight
     const ws = Object.entries(S.data.body).map(([id, b]) => Object.assign({ id }, b)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     h += '<section class="card"><h2>Bodyweight</h2><div class="wrow"><input id="wt" type="number" inputmode="decimal" step="0.1" placeholder="lbs"><button type="button" id="saveWt" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Log weight</button></div>';
@@ -674,6 +694,7 @@
     if (card && t.dataset.done != null) { D(card.dataset.ex).done = t.checked; saveDraft(); }
     if (card && t.dataset.skip != null) { D(card.dataset.ex).skipped = t.checked; saveDraft(); }
     if (t.dataset.chkpain != null) render();
+    if (t.id === 'noprone') { const p = Object.assign({}, profile() || {}); p.noProne = t.checked; put('plan', 'profile', p).then(() => put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: t.checked ? 'No lying face down turned on (rib pain): prone moves swapped for all-fours / doorway versions; Pull level held.' : 'No lying face down turned off: face-down moves are back.' })); render(); }
   });
   document.addEventListener('focusout', () => { setTimeout(() => { if (render.pending && !(document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) { render.pending = false; render(); } }, 50); });
   window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TABS.some((x) => x[0] === h)) { tab = h; render(); window.scrollTo(0, 0); } });

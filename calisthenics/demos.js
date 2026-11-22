@@ -298,6 +298,55 @@
       { d: 1.2, hL: 58, kL: 105, hR: 40, kR: 4, sp: 0, c: 'KEEP BOTH HIPS LEVEL' },
     ],
   };
+  // Rib-safe (no lying face down): all-fours versions
+  const QSOL_L = { a: 'handL', b: 'kneeR', p: 'pit', lo: 55, hi: 125 };
+  const QSOL_R = { a: 'handR', b: 'kneeL', p: 'pit', lo: 55, hi: 125 };
+  D.quadYT = {
+    cam: [30, 22, 3.3, 0.45],
+    f: [
+      Object.assign({}, QUAD, { sol: QSOL_L, hh: 0.6, c: 'BACK FLAT · HIPS LEVEL' }),
+      { d: 0.4, c: 'SHOULDER BLADE BACK + DOWN FIRST' },
+      { d: 1.2, sR: 188, aR: 30, eR: 0, c: 'Y: REACH UP + OUT · THUMB UP' },
+      { hh: 1.8, c: 'HOLD 2–5 SEC · SQUEEZE' },
+      { d: 1.2, sR: 90, aR: 6, c: 'LOWER SLOW' },
+      { d: 1.2, sR: 90, aR: 96, c: 'T: ARM STRAIGHT OUT TO THE SIDE' },
+      { hh: 1.8, c: 'SQUEEZE THE SHOULDER BLADE IN' },
+      { d: 1.2, aR: 6, c: 'LOWER · THEN OTHER ARM' },
+      { d: 0.8, sol: QSOL_R },
+      { d: 1.2, sL: 188, aL: 30, c: 'OTHER SIDE: Y' },
+      { hh: 1.2 },
+      { d: 1.2, sL: 90, aL: 6 },
+      { d: 1.2, sL: 90, aL: 96, c: 'OTHER SIDE: T' },
+      { hh: 1.2 },
+      { d: 1.2, aL: 6, c: 'TRUNK STAYS STILL THE WHOLE TIME' },
+      { d: 1.2, sR: 188, aR: 30, sp: 0, spT: 22, sol: QSOL_L, w: 1, c: '✗ BODY TWISTS TO LIFT HIGHER' },
+      { hh: 0.8 },
+      { d: 1, sR: 90, aR: 6, spT: 0, c: 'LIFT ONLY AS HIGH AS YOU STAY STILL' },
+    ],
+  };
+  D.quadYHold = {
+    cam: [30, 22, 3.3, 0.45],
+    f: [
+      Object.assign({}, QUAD, { sol: QSOL_L, hh: 0.6, c: 'ON ALL FOURS · BACK FLAT' }),
+      { d: 1.2, sR: 188, aR: 30, eR: 0, c: 'ARM UP IN A Y · THUMB UP' },
+      { hh: 3, c: 'HOLD 10–15 SEC · HIPS LEVEL' },
+      { d: 1, sR: 90, aR: 6, c: 'LOWER · SWITCH ARMS' },
+      { d: 0.6, sol: QSOL_R },
+      { d: 1.2, sL: 188, aL: 30, c: 'OTHER ARM' },
+      { hh: 2 },
+      { d: 1, sL: 90, aL: 6 },
+    ],
+  };
+  D.quadThoracic = {
+    cam: [20, 22, 3.2, 0.45],
+    f: [
+      Object.assign({}, QUAD, { sol: QSOL_L, sR: 70, aR: 70, eR: 150, hh: 0.6, c: 'HAND BEHIND YOUR HEAD' }),
+      { d: 1.6, spT: -38, aR: 110, c: 'ROTATE THE ELBOW UP TO THE CEILING' },
+      { hh: 1.2, c: 'HIPS STILL · UPPER BACK TURNS' },
+      { d: 1.6, spT: 18, aR: 40, c: 'ELBOW DOWN TOWARD THE OTHER HAND' },
+      { d: 1.2, spT: 0, aR: 70, c: '5–8 SLOW REPS · THEN SWITCH' },
+    ],
+  };
   D.bridgeHold = {
     cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
     f: [

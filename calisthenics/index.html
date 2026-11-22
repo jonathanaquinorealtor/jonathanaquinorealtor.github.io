@@ -191,6 +191,7 @@ td { color: var(--muted); }
 .wk .rest span { color: var(--muted); }
 .setup { font-size: 15px; margin: 10px 0 4px; color: var(--text); }
 .setup b { color: var(--teal); }
+.swapnote { margin: 18px 0 -8px; font-size: 13px; color: var(--teal); }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--teal); color: var(--teal-ink); font-weight: 700; padding: 12px 18px; border-radius: 12px; z-index: 50; max-width: calc(100% - 32px); }
 /* player */
 #player { position: fixed; inset: 0; z-index: 40; background: rgba(0, 3, 8, 0.92); display: grid; place-items: center; padding: calc(10px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
@@ -1409,6 +1410,55 @@ td { color: var(--muted); }
       { d: 1.2, hL: 58, kL: 105, hR: 40, kR: 4, sp: 0, c: 'KEEP BOTH HIPS LEVEL' },
     ],
   };
+  // Rib-safe (no lying face down): all-fours versions
+  const QSOL_L = { a: 'handL', b: 'kneeR', p: 'pit', lo: 55, hi: 125 };
+  const QSOL_R = { a: 'handR', b: 'kneeL', p: 'pit', lo: 55, hi: 125 };
+  D.quadYT = {
+    cam: [30, 22, 3.3, 0.45],
+    f: [
+      Object.assign({}, QUAD, { sol: QSOL_L, hh: 0.6, c: 'BACK FLAT · HIPS LEVEL' }),
+      { d: 0.4, c: 'SHOULDER BLADE BACK + DOWN FIRST' },
+      { d: 1.2, sR: 188, aR: 30, eR: 0, c: 'Y: REACH UP + OUT · THUMB UP' },
+      { hh: 1.8, c: 'HOLD 2–5 SEC · SQUEEZE' },
+      { d: 1.2, sR: 90, aR: 6, c: 'LOWER SLOW' },
+      { d: 1.2, sR: 90, aR: 96, c: 'T: ARM STRAIGHT OUT TO THE SIDE' },
+      { hh: 1.8, c: 'SQUEEZE THE SHOULDER BLADE IN' },
+      { d: 1.2, aR: 6, c: 'LOWER · THEN OTHER ARM' },
+      { d: 0.8, sol: QSOL_R },
+      { d: 1.2, sL: 188, aL: 30, c: 'OTHER SIDE: Y' },
+      { hh: 1.2 },
+      { d: 1.2, sL: 90, aL: 6 },
+      { d: 1.2, sL: 90, aL: 96, c: 'OTHER SIDE: T' },
+      { hh: 1.2 },
+      { d: 1.2, aL: 6, c: 'TRUNK STAYS STILL THE WHOLE TIME' },
+      { d: 1.2, sR: 188, aR: 30, sp: 0, spT: 22, sol: QSOL_L, w: 1, c: '✗ BODY TWISTS TO LIFT HIGHER' },
+      { hh: 0.8 },
+      { d: 1, sR: 90, aR: 6, spT: 0, c: 'LIFT ONLY AS HIGH AS YOU STAY STILL' },
+    ],
+  };
+  D.quadYHold = {
+    cam: [30, 22, 3.3, 0.45],
+    f: [
+      Object.assign({}, QUAD, { sol: QSOL_L, hh: 0.6, c: 'ON ALL FOURS · BACK FLAT' }),
+      { d: 1.2, sR: 188, aR: 30, eR: 0, c: 'ARM UP IN A Y · THUMB UP' },
+      { hh: 3, c: 'HOLD 10–15 SEC · HIPS LEVEL' },
+      { d: 1, sR: 90, aR: 6, c: 'LOWER · SWITCH ARMS' },
+      { d: 0.6, sol: QSOL_R },
+      { d: 1.2, sL: 188, aL: 30, c: 'OTHER ARM' },
+      { hh: 2 },
+      { d: 1, sL: 90, aL: 6 },
+    ],
+  };
+  D.quadThoracic = {
+    cam: [20, 22, 3.2, 0.45],
+    f: [
+      Object.assign({}, QUAD, { sol: QSOL_L, sR: 70, aR: 70, eR: 150, hh: 0.6, c: 'HAND BEHIND YOUR HEAD' }),
+      { d: 1.6, spT: -38, aR: 110, c: 'ROTATE THE ELBOW UP TO THE CEILING' },
+      { hh: 1.2, c: 'HIPS STILL · UPPER BACK TURNS' },
+      { d: 1.6, spT: 18, aR: 40, c: 'ELBOW DOWN TOWARD THE OTHER HAND' },
+      { d: 1.2, spT: 0, aR: 70, c: '5–8 SLOW REPS · THEN SWITCH' },
+    ],
+  };
   D.bridgeHold = {
     cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
     f: [
@@ -1755,6 +1805,9 @@ td { color: var(--muted); }
     ankleRocks: { setup: ['HALF-KNEEL · FRONT FOOT FLAT', 'HANDS ON HIPS'], feel: 'FEEL: STRETCH IN FRONT CALF/ANKLE' },
     bridgeClam: { setup: ['ON YOUR BACK · KNEES BENT', 'FEET HIP-WIDTH'], feel: 'FEEL: SIDE OF THE HIP' },
     hamStretch: { setup: ['ON YOUR BACK · BACK FLAT', 'LIFT ONE LEG · HOLD BEHIND THIGH'], feel: 'FEEL: GENTLE PULL BEHIND THE THIGH' },
+    quadYT: { setup: ['ON ALL FOURS · HANDS UNDER SHOULDERS', 'KNEES UNDER HIPS · BACK FLAT'], feel: 'FEEL: BETWEEN SPINE + SHOULDER BLADE' },
+    quadYHold: { setup: ['ON ALL FOURS · BACK FLAT', 'BRACE ABS · HIPS LEVEL'], feel: 'FEEL: UPPER BACK + BACK OF SHOULDER' },
+    quadThoracic: { setup: ['ON ALL FOURS · ONE HAND BEHIND HEAD', 'SIT HIPS SLIGHTLY BACK'], feel: 'FEEL: UPPER BACK OPENING, NOT LOW BACK' },
     // reaction + footwork
     pointStep: { setup: ['FEET WIDE · KNEES SOFT', 'WEIGHT ON THE BALLS OF FEET'], feel: 'FEEL: LIGHT + READY TO MOVE' },
     numberSteps: { setup: ['FEET WIDE · KNEES SOFT', 'HANDS UP · EYES FORWARD'], feel: 'FEEL: QUICK FIRST STEP' },
@@ -1937,6 +1990,17 @@ td { color: var(--muted); }
     { id: 'subBug', name: 'Dead Bug (bird dog / curl-up substitute)', demo: 'deadBug', dose: '3 × 6–8 / side', cues: ['Arms up, knees over hips', 'Reach opposite arm + leg slowly', 'Low back stays on the mat'], rest: REST.core, kind: 'sub' },
   ];
   SUBS.forEach((s) => { EX[s.id] = s; });
+  // Rib-safe swaps: used while "No lying face down" is on (rib pain when prone).
+  const RIBSAFE = [
+    { id: 'qYT', name: 'All-Fours Y-T Raise', demo: 'quadYT', sets: 3, reps: [6, 10], unit: 'reps', perLabel: 'per letter, each arm', tempo: 'Lift 2 sec · hold 2–5 sec · lower 3 sec', rest: REST.gen, tendon: 'Shoulder blades, no chest pressure', kind: 'sub',
+      cues: ['Shoulder blade back + down first, then lift', 'Y: arm up + out, thumb up · T: arm straight out to the side', 'One set = Y then T, each arm'], feel: 'Between your spine and shoulder blade. Not your neck.', wrong: 'Trunk twisting to lift higher.' },
+    { id: 'qYH', name: 'All-Fours Y Hold', demo: 'quadYHold', sets: 3, reps: [10, 15], unit: 'sec', perLabel: 'each arm', tempo: 'Hold', rest: REST.tSlow, tendon: 'Shoulder + upper-back tendons', kind: 'tendon',
+      cues: ['On all fours, back flat', 'One arm up in a Y, thumb up', 'Hold 10–15 sec, switch'], feel: 'Upper back and back of the shoulder.', wrong: 'Hips tilting or low back sagging.' },
+    { id: 'qTR', name: 'All-Fours Thoracic Rotation', demo: 'quadThoracic', dose: '5–8 slow reps / side', kind: 'mobility', rest: REST.mob,
+      cues: ['Hand behind your head', 'Rotate the elbow up to the ceiling', 'Hips stay still — only the upper back turns'] },
+  ];
+  RIBSAFE.forEach((s) => { EX[s.id] = s; });
+  const PRONE_SWAP = { pull0: 'qYT', pull2: 'subDoor', pull4: 'subDoor', pull5: 'subDoor', pull6: 'subDoor', tY: 'qYH', m7: 'qTR' };
 
   const DAYS = {
     // Power first (fresh), then main ladders, Big 3 block, tendon block last.
@@ -1978,7 +2042,7 @@ td { color: var(--muted); }
     ['Between sessions', '48 hours · non-consecutive days · 3× per week'],
   ];
 
-  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
+  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, RIBSAFE, PRONE_SWAP, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
 })();
 
 </script>
@@ -2060,6 +2124,23 @@ td { color: var(--muted); }
   }
   const changesSorted = () => Object.entries(S.data.changes).map(([id, c]) => Object.assign({ id }, c)).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   function weekNum() { const p = profile(); const st = (p && p.start) || '2026-11-19'; return Math.floor(daysBetween(st, todayStr()) / 7) + 1; }
+  const noProne = () => !!(profile() && profile().noProne);
+  const swapEx = (ex) => (noProne() && P.PRONE_SWAP[ex.id] ? P.EX[P.PRONE_SWAP[ex.id]] : ex);
+  // The day's exercises in order, with rib-safe swaps applied and duplicates removed.
+  function dayList(day) {
+    const out = []; const seen = new Set();
+    for (const it of P.DAYS[day].items) {
+      if (it.flow) { out.push({ flow: true }); continue; }
+      const list = it.big3 ? P.BIG3.map((b) => ({ ex: b, big3: true })) : [{ ex: it.lad ? curEx(it.lad) : P.EX[it.ex] }];
+      for (const x of list) {
+        const ex = swapEx(x.ex); if (seen.has(ex.id)) continue; seen.add(ex.id);
+        // carry anything already typed on the original card over to the swapped one
+        if (ex !== x.ex && draft.items && draft.items[x.ex.id] && !draft.items[ex.id]) { draft.items[ex.id] = draft.items[x.ex.id]; saveDraft(); }
+        out.push({ ex, big3: x.big3, swapped: ex !== x.ex, orig: x.ex });
+      }
+    }
+    return out;
+  }
   function inDeload() { const p = profile(); return !!(p && p.deloadUntil && p.deloadUntil >= todayStr()); }
   function suggestDay() {
     const ls = logsSorted().filter((l) => l.day);
@@ -2231,11 +2312,13 @@ td { color: var(--muted); }
     else { const recent = changesSorted().slice(0, 3); if (recent.length) h += changedCard(recent.map((c) => c.text), 'Recent changes', false); }
     h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li><li>Rough day? 1–2 sets still count — beginners gain almost as much from fewer sets.</li><li>Very sore muscles (normal 1–3 days after)? Skip the fast and heavy moves for that area, do the rest, and take an easy walk. Dark urine or swollen, very tender muscles: get checked the same day.</li></ul></section>';
     h += '<div class="warm"><b>Warm-up</b> Mobility Flow 1–5 (about 5 min) <a href="#mobility">Open flow</a></div>';
-    let n = 0;
-    DY.items.forEach((it) => {
+    let n = 0, big3Head = false;
+    if (noProne()) h += '<div class="alert teal">No lying face down is on (rib pain): face-down moves are swapped for all-fours or doorway versions. Your Pull level is held. Turn it off in Me when your ribs feel fine.</div>';
+    dayList(day).forEach((it) => {
       if (it.flow) { h += flowCard(n++); return; }
-      if (it.big3) { h += '<div class="blockhead"><b>Big 3 core block</b> short perfect holds · 30 sec rest</div>'; P.BIG3.forEach((b) => { h += exCard(b, ++n); }); return; }
-      h += exCard(it.lad ? curEx(it.lad) : P.EX[it.ex], ++n);
+      if (it.big3 && !big3Head) { big3Head = true; h += '<div class="blockhead"><b>Big 3 core block</b> short perfect holds · 30 sec rest</div>'; }
+      if (it.swapped) h += '<div class="swapnote">Swapped for ' + esc(it.orig.name) + ' (no lying face down)</div>';
+      h += exCard(it.ex, ++n);
     });
     h += walkCard();
     h += '<div class="finish"><button type="button" id="finish" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Finish workout + save</button><p class="fine">Saves your sets, ratings and pain. The plan then adapts: pain first, then form, then reps and feedback.</p></div>';
@@ -2311,7 +2394,7 @@ td { color: var(--muted); }
   function flowCard(i) {
     const d = D('flow');
     let h = '<article class="card ex" data-ex="flow"><div class="ex-top"><span class="num">' + (i + 1) + '</span><div class="ex-head"><div class="tag">MOBILITY</div><h3>Full Mobility Flow</h3><div class="dose">About 10 minutes · 10 moves</div></div></div>';
-    h += '<ol class="flowlist">' + P.MOBILITY.map((m) => '<li><span>' + esc(m.name) + ' <em>' + esc(m.dose) + '</em></span>' + demoBtn(m.id, 'Watch') + '</li>').join('') + '</ol>';
+    h += '<ol class="flowlist">' + P.MOBILITY.map((m) => swapEx(m)).map((m) => '<li><span>' + esc(m.name) + ' <em>' + esc(m.dose) + '</em></span>' + demoBtn(m.id, 'Watch') + '</li>').join('') + '</ol>';
     h += restChips(P.REST.mob);
     h += '<div class="logbox"><div class="rate">' + [['easy', 'Too easy'], ['right', 'Just right'], ['hard', 'Too hard']].map(([k, t]) => '<button type="button" data-rate="' + k + '" class="' + (d.rating === k ? 'on ' + k : '') + '">' + t + '</button>').join('') + '</div>';
     const pv = d.pain == null ? 0 : d.pain;
@@ -2406,8 +2489,7 @@ td { color: var(--muted); }
     const day = selDay || suggestDay();
     const DY = P.DAYS[day];
     const entries = [];
-    const flat = [];
-    for (const it of DY.items) { if (it.big3) P.BIG3.forEach((b) => flat.push({ ex: b.id })); else flat.push(it); }
+    const flat = dayList(day).map((x) => (x.flow ? { flow: true } : { ex: x.ex.id }));
     for (const it of flat) {
       if (it.flow) { const d = D('flow'); if (d.done || d.rating) entries.push({ ex: 'flow', kind: 'mobility', rating: d.rating || null, pain: d.pain || 0 }); continue; }
       const ex = it.lad ? curEx(it.lad) : P.EX[it.ex];
@@ -2456,6 +2538,7 @@ td { color: var(--muted); }
     h += backRulesCard();
     for (const k of ['push', 'pull', 'legs', 'core']) h += ladderSection(k);
     h += '<section class="block"><h2>Big 3 core block</h2><p class="fine">Every Day A and B. Short holds of 8–10 sec, descending reps (6-4-2), 2–3 sets. Low spine load: the curl-up gave the best ratio of ab work to spine compression in McGill’s lab tests. Good, not magic — a Cochrane review found this kind of core work isn’t better than other exercise for back pain.</p>' + P.BIG3.map((b) => miniCard(b)).join('') + '</section>';
+    h += '<section class="block"><h2>Rib-safe swaps</h2><p class="fine">Used while “No lying face down” is on.</p>' + P.RIBSAFE.map((b) => miniCard(b)).join('') + '</section>';
     h += '<section class="block"><h2>Extras</h2><p class="fine">The wall-check hinge is now part of the warm-up (Mobility Flow #2). The front plank pyramid is optional core work on Day C or off days.</p>' + P.EXTRAS.map((b) => miniCard(b)).join('') + '</section>';
     h += '<section class="block"><h2>Substitutes</h2>' + P.SUBS.map((s) => miniCard(s)).join('') + '</section>';
     h += '<section class="block"><h2>Swap options by pattern</h2><p class="fine">Easier → standard → harder. Use when a move hurts, doesn’t suit you, or stalls.</p>' + P.VARIATIONS.map(([t, d]) => '<details><summary>' + esc(t) + '</summary><p>' + esc(d) + '</p></details>').join('') + '</section>';
@@ -2588,6 +2671,7 @@ td { color: var(--muted); }
       h += '</article>';
     }
     h += '</section>';
+    h += '<section class="card"><h2>No lying face down</h2><p>For rib pain when lying on your stomach. Swaps face-down moves for all-fours or doorway versions. Your Pull level is held while it’s on.</p><label class="formchk"><input id="noprone" type="checkbox" ' + (noProne() ? 'checked' : '') + (S.canWrite ? '' : ' disabled') + '> On</label><p class="fine">Get rib pain checked if it hurts to breathe deeply, one spot is very tender, it followed a fall, or it isn’t better in 1–2 weeks. Chest pain with shortness of breath: get care right away.</p></section>';
     // weight
     const ws = Object.entries(S.data.body).map(([id, b]) => Object.assign({ id }, b)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     h += '<section class="card"><h2>Bodyweight</h2><div class="wrow"><input id="wt" type="number" inputmode="decimal" step="0.1" placeholder="lbs"><button type="button" id="saveWt" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Log weight</button></div>';
@@ -2659,6 +2743,7 @@ td { color: var(--muted); }
     if (card && t.dataset.done != null) { D(card.dataset.ex).done = t.checked; saveDraft(); }
     if (card && t.dataset.skip != null) { D(card.dataset.ex).skipped = t.checked; saveDraft(); }
     if (t.dataset.chkpain != null) render();
+    if (t.id === 'noprone') { const p = Object.assign({}, profile() || {}); p.noProne = t.checked; put('plan', 'profile', p).then(() => put('changes', 'c' + Date.now(), { at: new Date().toISOString(), date: todayStr(), text: t.checked ? 'No lying face down turned on (rib pain): prone moves swapped for all-fours / doorway versions; Pull level held.' : 'No lying face down turned off: face-down moves are back.' })); render(); }
   });
   document.addEventListener('focusout', () => { setTimeout(() => { if (render.pending && !(document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) { render.pending = false; render(); } }, 50); });
   window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TABS.some((x) => x[0] === h)) { tab = h; render(); window.scrollTo(0, 0); } });

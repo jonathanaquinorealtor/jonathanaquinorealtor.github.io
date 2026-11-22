@@ -62,6 +62,9 @@
     ankleRocks: { setup: ['HALF-KNEEL · FRONT FOOT FLAT', 'HANDS ON HIPS'], feel: 'FEEL: STRETCH IN FRONT CALF/ANKLE' },
     bridgeClam: { setup: ['ON YOUR BACK · KNEES BENT', 'FEET HIP-WIDTH'], feel: 'FEEL: SIDE OF THE HIP' },
     hamStretch: { setup: ['ON YOUR BACK · BACK FLAT', 'LIFT ONE LEG · HOLD BEHIND THIGH'], feel: 'FEEL: GENTLE PULL BEHIND THE THIGH' },
+    quadYT: { setup: ['ON ALL FOURS · HANDS UNDER SHOULDERS', 'KNEES UNDER HIPS · BACK FLAT'], feel: 'FEEL: BETWEEN SPINE + SHOULDER BLADE' },
+    quadYHold: { setup: ['ON ALL FOURS · BACK FLAT', 'BRACE ABS · HIPS LEVEL'], feel: 'FEEL: UPPER BACK + BACK OF SHOULDER' },
+    quadThoracic: { setup: ['ON ALL FOURS · ONE HAND BEHIND HEAD', 'SIT HIPS SLIGHTLY BACK'], feel: 'FEEL: UPPER BACK OPENING, NOT LOW BACK' },
     // reaction + footwork
     pointStep: { setup: ['FEET WIDE · KNEES SOFT', 'WEIGHT ON THE BALLS OF FEET'], feel: 'FEEL: LIGHT + READY TO MOVE' },
     numberSteps: { setup: ['FEET WIDE · KNEES SOFT', 'HANDS UP · EYES FORWARD'], feel: 'FEEL: QUICK FIRST STEP' },

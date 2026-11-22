@@ -8,15 +8,16 @@ groups.push(['Extras', P.EXTRAS.map(e=>({e,label:'Warm-up / optional'}))]);
 groups.push(['Tendons', P.TENDON.map(e=>({e,label:e.tendon}))]);
 groups.push(['Mobility flow', P.MOBILITY.map((e,i)=>({e,label:(i+1)+' · '+e.dose}))]);
 groups.push(['Reaction + footwork', P.REACTION.concat([P.FOOTWORK]).map(e=>({e,label:e.dose}))]);
+groups.push(['Rib-safe swaps (no lying face down)', P.RIBSAFE.map(e=>({e,label:e.dose||'Replaces a face-down move'}))]);
 groups.push(['Substitutes', P.SUBS.map(e=>({e,label:e.dose}))]);
-const have=new Set(fs.readdirSync('fclips')); const files={}; let n=0; const seen=new Set();
+const have=new Set(fs.readdirSync('nclips')); const files={}; let n=0; const seen=new Set();
 let body='';
 for (const [g,items] of groups){
   let cards='';
   for (const it of items){
     const f=(it.file||slug(it.e.name))+'-fighter-annotated.mp4';
     if(!have.has(f)||seen.has(f+g)) continue; seen.add(f+g);
-    files['clips/'+f]='fclips/'+f; n++;
+    files['clips/'+f]='nclips/'+f; n++;
     cards+=`<figure><video src="clips/${f}" controls loop muted playsinline preload="metadata"></video><figcaption><b>${esc(it.e.name)}</b><span>${esc(it.label||'')}</span></figcaption></figure>`;
   }
   if(cards) body+=`<section><h2>${esc(g)}</h2><div class="grid">${cards}</div></section>`;
@@ -40,6 +41,6 @@ video{width:100%;aspect-ratio:1/1;display:block;background:#03070d}
 figcaption{padding:10px 12px;display:grid;gap:2px}figcaption b{font-weight:600}figcaption span{color:var(--muted);font-size:14px}
 </style>
 <div class="wrap"><h1>Fighter Demo <i>Clips</i></h1>
-<p class="lede">${n} standalone demo clips in your reference style: a dark muscular fighter with a blue headband and long tails, satin trunks with blue side panels and a white waistband, high-top boots, and bare hands (no gloves), on a smoky blue stage with a glowing horizon and a wet reflective floor. Each clip shows one full rep, with timed form captions that appear at the right moment. Red captions show the mistake to avoid. Rendered from the same real-time 3D engine as your plan's demos. It is not AI-generated video and not photorealistic, and the figure is built from rounded body parts, so it won't look as smooth as the reference.</p>
+<p class="lede">${n} standalone demo clips in your reference style: a dark muscular fighter with a blue headband and long tails, satin trunks with blue side panels and a white waistband, high-top boots, and bare hands (no gloves), on a smoky blue stage with a glowing horizon and a wet reflective floor. Each clip shows one full rep with labeled on-screen notes: SETUP (how to get into position), FORM (what to do at each point), FEEL (what you should feel), and AVOID in red (the mistake). Rendered from the same real-time 3D engine as your plan's demos. It is not AI-generated video and not photorealistic, and the figure is built from rounded body parts, so it won't look as smooth as the reference.</p>
 ${body}</div>`;
 fs.writeFileSync('gallery/index.html',html); fs.writeFileSync('gallery/files.json',JSON.stringify(files)); console.log('clips in gallery',n);

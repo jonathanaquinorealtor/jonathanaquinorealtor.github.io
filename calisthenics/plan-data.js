@@ -166,6 +166,17 @@
     { id: 'subBug', name: 'Dead Bug (bird dog / curl-up substitute)', demo: 'deadBug', dose: '3 × 6–8 / side', cues: ['Arms up, knees over hips', 'Reach opposite arm + leg slowly', 'Low back stays on the mat'], rest: REST.core, kind: 'sub' },
   ];
   SUBS.forEach((s) => { EX[s.id] = s; });
+  // Rib-safe swaps: used while "No lying face down" is on (rib pain when prone).
+  const RIBSAFE = [
+    { id: 'qYT', name: 'All-Fours Y-T Raise', demo: 'quadYT', sets: 3, reps: [6, 10], unit: 'reps', perLabel: 'per letter, each arm', tempo: 'Lift 2 sec · hold 2–5 sec · lower 3 sec', rest: REST.gen, tendon: 'Shoulder blades, no chest pressure', kind: 'sub',
+      cues: ['Shoulder blade back + down first, then lift', 'Y: arm up + out, thumb up · T: arm straight out to the side', 'One set = Y then T, each arm'], feel: 'Between your spine and shoulder blade. Not your neck.', wrong: 'Trunk twisting to lift higher.' },
+    { id: 'qYH', name: 'All-Fours Y Hold', demo: 'quadYHold', sets: 3, reps: [10, 15], unit: 'sec', perLabel: 'each arm', tempo: 'Hold', rest: REST.tSlow, tendon: 'Shoulder + upper-back tendons', kind: 'tendon',
+      cues: ['On all fours, back flat', 'One arm up in a Y, thumb up', 'Hold 10–15 sec, switch'], feel: 'Upper back and back of the shoulder.', wrong: 'Hips tilting or low back sagging.' },
+    { id: 'qTR', name: 'All-Fours Thoracic Rotation', demo: 'quadThoracic', dose: '5–8 slow reps / side', kind: 'mobility', rest: REST.mob,
+      cues: ['Hand behind your head', 'Rotate the elbow up to the ceiling', 'Hips stay still — only the upper back turns'] },
+  ];
+  RIBSAFE.forEach((s) => { EX[s.id] = s; });
+  const PRONE_SWAP = { pull0: 'qYT', pull2: 'subDoor', pull4: 'subDoor', pull5: 'subDoor', pull6: 'subDoor', tY: 'qYH', m7: 'qTR' };
 
   const DAYS = {
     // Power first (fresh), then main ladders, Big 3 block, tendon block last.
@@ -207,5 +218,5 @@
     ['Between sessions', '48 hours · non-consecutive days · 3× per week'],
   ];
 
-  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
+  window.PLAN = { REST, LADDERS, EX, BIG3, EXTRAS, RIBSAFE, PRONE_SWAP, TENDON, MOBILITY, REACTION, FOOTWORK, SUBS, DAYS, VARIATIONS, REST_TABLE, UNLOCK_RULE };
 })();
