@@ -185,7 +185,13 @@
     return '<div class="rest"><div><b>Between reps</b><span>' + esc(r.reps) + '</span></div><div><b>Between sets</b><span>' + esc(r.sets) + '</span></div><div><b>Before next exercise</b><span>' + esc(r.next) + '</span></div></div>';
   }
   function demoBtn(id, label) { return '<button class="demo-btn" data-demo="' + esc(id) + '" type="button"><span class="play"></span>' + esc(label || 'Watch 1 rep') + '</button>'; }
-  function cueList(ex) { return '<ul class="cues">' + (ex.cues || []).map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>'; }
+  function setupLine(ex) {
+    const n = window.DEMO_NOTES && window.DEMO_NOTES[ex.demo];
+    if (!n || !n.setup) return '';
+    const cap = (t) => t.toLowerCase().replace(/(^|[·-]\s*)([a-z])/g, (m, p, c) => p + c.toUpperCase());
+    return '<p class="setup"><b>Setup:</b> ' + n.setup.map((t) => esc(cap(t))).join(' · ') + '</p>';
+  }
+  function cueList(ex) { return setupLine(ex) + '<ul class="cues">' + (ex.cues || []).map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>'; }
   function doseLine(ex) {
     if (ex.dose) return esc(ex.dose);
     const sl = ex.setsLabel || ex.sets;
@@ -238,7 +244,7 @@
     h += morningCheckCard();
     if (lastResult) h += changedCard(lastResult.msgs, 'What changed and why', true);
     else { const recent = changesSorted().slice(0, 3); if (recent.length) h += changedCard(recent.map((c) => c.text), 'Recent changes', false); }
-    h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li><li>Rough day? 1–2 sets still count — beginners gain almost as much from fewer sets.</li></ul></section>';
+    h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li><li>Rough day? 1–2 sets still count — beginners gain almost as much from fewer sets.</li><li>Very sore muscles (normal 1–3 days after)? Skip the fast and heavy moves for that area, do the rest, and take an easy walk. Dark urine or swollen, very tender muscles: get checked the same day.</li></ul></section>';
     h += '<div class="warm"><b>Warm-up</b> Mobility Flow 1–5 (about 5 min) <a href="#mobility">Open flow</a></div>';
     let n = 0;
     DY.items.forEach((it) => {
