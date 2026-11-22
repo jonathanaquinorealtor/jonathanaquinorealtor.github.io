@@ -234,6 +234,7 @@
     else if (weekNum() >= 6 && !(profile() && profile().deloads && profile().deloads.length)) alerts.push(['teal', 'Week ' + weekNum() + ': a deload week is due (every 6–8 weeks). Start it in Me.']);
     for (const msg of reactiveWarnings()) alerts.push(['amber', msg]);
     h += alerts.map(([c, m]) => '<div class="alert ' + c + '">' + esc(m) + '</div>').join('');
+    h += weekCard(day);
     h += morningCheckCard();
     if (lastResult) h += changedCard(lastResult.msgs, 'What changed and why', true);
     else { const recent = changesSorted().slice(0, 3); if (recent.length) h += changedCard(recent.map((c) => c.text), 'Recent changes', false); }
@@ -289,6 +290,26 @@
     if (ex.ladder) h += '<p class="fine">Set 1 at RPE 9–10, or 2+ reps short? Drop one step for sets 2–3 instead of grinding.</p>';
     h += '</div></article>';
     return h;
+  }
+  // Week layout: full body 3x/week, a day off between sessions (48 h), walks on 2-3 off days, one full rest day.
+  function weekCard(today) {
+    const order = ['A', 'B', 'C'];
+    const last = lastSessionDate();
+    const todayS = todayStr();
+    const trainedToday = logsSorted().some((l) => l.date === todayS && l.type !== 'walk');
+    let idx = order.indexOf(today);
+    const lifts = new Set(); let gap = last ? daysBetween(last, todayS) : 2;
+    if (trainedToday) { lifts.add(0); gap = 0; }
+    for (let i = trainedToday ? 1 : 0; i < 7 && lifts.size < 3; i++) { gap = i === 0 ? gap : gap + 1; if (gap >= 2) { lifts.add(i); gap = 0; } }
+    const days = []; let offSeen = 0; const offTotal = 7 - lifts.size;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() + i);
+      let what;
+      if (lifts.has(i)) what = (i === 0 && trainedToday) ? 'done' : 'Day ' + order[(idx++) % 3];
+      else { offSeen++; what = offSeen === offTotal ? 'rest' : 'walk'; }
+      days.push({ d, what });
+    }
+    return '<section class="week"><div class="tag">THIS WEEK</div><div class="wk">' + days.map((x, i) => '<div class="' + (i === 0 ? 'now ' : '') + (x.what.startsWith('Day') ? 'lift' : x.what) + '"><b>' + x.d.toLocaleDateString(undefined, { weekday: 'short' }) + '</b><span>' + (x.what === 'walk' ? 'Walk' : x.what === 'rest' ? 'Rest' : x.what === 'done' ? 'Done ✓' : x.what) + '</span></div>').join('') + '</div><p class="fine">Full body 3× a week with a day between (48 h recovery). Walks on off days, not right before power work. Mobility any day.</p></section>';
   }
   function walkCard() {
     const walks = logsSorted().filter((l) => l.type === 'walk');

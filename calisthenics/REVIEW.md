@@ -65,3 +65,16 @@ I checked 15 more questions against reviews, meta-analyses and the best trials I
 
 ## Limits of this review
 Most sources were read as abstracts or summaries, not full papers. Several key comparisons rest on small trials. Nothing here studied 220-lb beginners with a past disc herniation specifically. Your clinician's advice wins.
+
+---
+
+# How the week is split (2026-11-22)
+
+| Question | What the evidence says | Plan decision |
+|---|---|---|
+| Full body or split? | Split and full-body routines give the same strength and muscle gains when weekly sets are equal ([2024 meta-analysis, 14 studies](https://www.researchgate.net/publication/379724552_Efficacy_of_Split_Versus_Full-Body_Resistance_Training_on_Strength_and_Muscle_Growth_A_Systematic_Review_With_Meta-Analysis)). | **Keep full body.** With 3 days, full body hits every muscle 2–3× a week. A split would hit some muscles only once. |
+| How often per muscle? | Once weekly sets are matched, training a muscle 1–3× a week makes little difference ([Pelland 2024](https://www.researchgate.net/publication/398333408_The_Resistance_Training_Dose_Response_Meta-Regressions_Exploring_the_Effects_of_Weekly_Volume_and_Frequency_on_Muscle_Hypertrophy_and_Strength_Gains_The_Resistance_Training_Dose_ResponseJ_C_Pelland_et)). Twice a week beat once a week in the earlier analysis ([Schoenfeld 2016](https://www.researchgate.net/publication/301578131_Effects_of_Resistance_Training_Frequency_on_Measures_of_Muscle_Hypertrophy_A_Systematic_Review_and_Meta-Analysis)). | **Keep:** push 2× (A, C), pull 2× (B, C), glutes + Big 3 2× (A, B), legs and power 3×. Total weekly sets matter more than which day they land on. |
+| Days between sessions? | Untrained people mostly recover in 48 h; a muscle-damage marker stayed high for 48 h and was back to normal by 72 h ([recovery study](https://paulogentil.com/pdf/Time%20course%20of%20recovery%20following%20resistance%20training%20leading%20or%20not%20to%20failure.pdf), [single vs multi-joint recovery](https://digitalcommons.wku.edu/cgi/viewcontent.cgi?article=1653&context=ijes)). | **Keep** a day off between sessions. Max 3 lifting days per 7. |
+| Does cardio hurt strength? | Cardio + strength gave the same muscle and strength gains as strength alone (43 studies). The one exception: **explosive strength** gains were blunted ([Schumann 2022](https://pmc.ncbi.nlm.nih.gov/articles/PMC5407958), [Wilson 2012](https://journals.lww.com/nsca-jscr/fulltext/2012/08000/concurrent_training__a_meta_analysis_examining.35.aspx)). | **Walks go on off days, not right before power work.** Brisk walking is low intensity, so interference should be minimal. |
+
+**Your week:** lift every other day (A → B → C rotation), walk 20–30 min on 2–3 off days, take one full rest day. Mobility flow any day. The app's Today tab now shows this week laid out.

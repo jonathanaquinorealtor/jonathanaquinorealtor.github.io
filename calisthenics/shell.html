@@ -181,6 +181,14 @@ td { color: var(--muted); }
 .blockhead { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 22px 0 -4px; color: var(--muted); font-size: 15px; }
 .blockhead b { font: 700 18px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--teal); }
 .walk { border-color: var(--teal-2); }
+.week { margin: 14px 0; }
+.wk { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 8px 0; }
+.wk div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; text-align: center; display: grid; gap: 2px; min-width: 0; }
+.wk b { font: 700 13px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.wk span { font-size: 13px; font-weight: 600; }
+.wk .lift { border-color: var(--teal-2); } .wk .lift span { color: var(--teal); }
+.wk .now { box-shadow: 0 0 0 2px var(--teal) inset; }
+.wk .rest span { color: var(--muted); }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--teal); color: var(--teal-ink); font-weight: 700; padding: 12px 18px; border-radius: 12px; z-index: 50; max-width: calc(100% - 32px); }
 /* player */
 #player { position: fixed; inset: 0; z-index: 40; background: rgba(0, 3, 8, 0.92); display: grid; place-items: center; padding: calc(10px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
