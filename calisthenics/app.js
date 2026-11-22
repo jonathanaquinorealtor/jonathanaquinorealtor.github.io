@@ -210,7 +210,7 @@
   function setupLine(ex) {
     const n = window.DEMO_NOTES && window.DEMO_NOTES[ex.demo];
     if (!n || !n.setup) return '';
-    const cap = (t) => t.toLowerCase().replace(/(^|[·-]\s*)([a-z])/g, (m, p, c) => p + c.toUpperCase());
+    const cap = (t) => t.toLowerCase().replace(/(^|·\s*|-\s+)([a-z])/g, (m, p, c) => p + c.toUpperCase());
     return '<p class="setup"><b>Setup:</b> ' + n.setup.map((t) => esc(cap(t))).join(' · ') + '</p>';
   }
   function cueList(ex) { return setupLine(ex) + '<ul class="cues">' + (ex.cues || []).map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul><p class="breath"><b>Breathing:</b> ' + esc(P.breathFor(ex)) + '</p>'; }
@@ -233,6 +233,44 @@
     $('#status').innerHTML = statusLine();
     const v = { today: vToday, howto: vHowTo, power: vPower, mobility: vMobility, tendons: vTendons, log: vLog, works: vWorks, me: vMe }[tab];
     $('#view').innerHTML = v();
+    const hd = document.querySelector('header.top'); if (hd) document.documentElement.style.setProperty('--hdr', hd.offsetHeight + 'px');
+    if (tab === 'today') initDeck();
+  }
+  // Swipe deck: one exercise per screen
+  let deckIdx = 0; try { deckIdx = Number(sessionStorage.getItem('jc-deck') || 0) || 0; } catch (e) { }
+  function initDeck() {
+    const deck = $('#deck'); if (!deck) return;
+    const slides = [...deck.querySelectorAll('.slide')]; if (!slides.length) return;
+    deckIdx = Math.max(0, Math.min(slides.length - 1, deckIdx));
+    const fit = () => { const s = slides[deckIdx]; if (s) deck.style.height = s.offsetHeight + 'px'; };
+    const mark = () => {
+      deckIdx = Math.max(0, Math.min(slides.length - 1, deckIdx)); if (!slides[deckIdx] || !slides[deckIdx].isConnected) return;
+      $('#deckpos').textContent = (deckIdx + 1) + ' of ' + slides.length;
+      const h3 = slides[deckIdx].querySelector('h3'); $('#deckname').textContent = h3 ? h3.textContent : '';
+      document.querySelectorAll('.dots2 i').forEach((d, i) => { d.className = i === deckIdx ? 'on' : (isLogged(slides[i]) ? 'done' : ''); });
+      try { sessionStorage.setItem('jc-deck', String(deckIdx)); } catch (e) { }
+      fit();
+    };
+    deck.scrollLeft = deckIdx * deck.clientWidth;
+    deck._mark = mark;
+    mark();
+    let t = 0;
+    deck.addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(() => { if (!deck.isConnected || !deck.clientWidth) return; const i = Math.max(0, Math.min(slides.length - 1, Math.round(deck.scrollLeft / deck.clientWidth))); if (i !== deckIdx) { deckIdx = i; mark(); } }, 80); }, { passive: true });
+    if (!window.__deckFit) { window.__deckFit = true; window.addEventListener('resize', () => { const d = $('#deck'); if (d && d._mark) d._mark(); }); }
+    deck.addEventListener('input', fit); deck.addEventListener('click', () => setTimeout(fit, 0));
+  }
+  function isLogged(slide) {
+    const card = slide.querySelector('[data-ex]'); if (!card) return false;
+    const d = draft.items && draft.items[card.dataset.ex];
+    return !!(d && ((d.sets || []).some((v) => v != null && v !== '') || d.skipped || d.done));
+  }
+  function goSlide(i) {
+    const deck = $('#deck'); if (!deck) return;
+    if (i === 'finish') { const f = $('#finish'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    deckIdx = Number(i); deck.scrollTo({ left: deckIdx * deck.clientWidth, behavior: 'smooth' }); if (deck._mark) deck._mark();
+    const bar = $('#deckbar'), hd = document.querySelector('header.top');
+    const y = deck.getBoundingClientRect().top + window.scrollY - ((hd ? hd.offsetHeight : 90) + (bar ? bar.offsetHeight : 50) + 8);
+    if (Math.abs(window.scrollY - y) > 4) window.scrollTo({ top: y, behavior: 'smooth' });
   }
   function statusLine() {
     if (S.mode === 'loading') return '<span class="pill">Loading your plan…</span>';
@@ -268,14 +306,23 @@
     else { const recent = changesSorted().slice(0, 3); if (recent.length) h += changedCard(recent.map((c) => c.text), 'Recent changes', false); }
     h += '<section class="prep"><h2>Before you start</h2><ul><li>Light snack 1–2 hours before — not fasted, not a big meal.</li><li>Sip water. No big gulps mid-workout.</li><li>Power goes first while your legs are fresh. Shaky = stop the power sets.</li><li>Rough day? 1–2 sets still count — beginners gain almost as much from fewer sets.</li><li>Very sore muscles (normal 1–3 days after)? Skip the fast and heavy moves for that area, do the rest, and take an easy walk. Dark urine or swollen, very tender muscles: get checked the same day.</li></ul></section>';
     h += '<div class="warm"><b>Warm-up</b> Mobility Flow 1–5 (about 5 min) <a href="#mobility">Open flow</a></div>';
-    let n = 0, big3Head = false;
-    if (noProne()) h += '<div class="alert teal">No lying face down is on (rib pain): face-down moves are swapped for all-fours or doorway versions. Your Pull level is held. Turn it off in Me when your ribs feel fine.</div>';
-    dayList(day).forEach((it) => {
-      if (it.flow) { h += flowCard(n++); return; }
-      if (it.big3 && !big3Head) { big3Head = true; h += '<div class="blockhead"><b>Big 3 core block</b> short perfect holds · 30 sec rest</div>'; }
-      if (it.swapped) h += '<div class="swapnote">Swapped for ' + esc(it.orig.name) + ' (no lying face down)</div>';
-      h += exCard(it.ex, ++n);
+    let n = 0;
+    if (noProne()) h += '<div class="alert teal">No lying face down is on (rib pain): face-down moves are swapped for all-fours or doorway versions. Turn it off in Me when your ribs feel fine.</div>';
+    const items = dayList(day);
+    const total = items.length;
+    let slides = '';
+    items.forEach((it, i) => {
+      let s = '';
+      if (it.flow) s = flowCard(n++);
+      else {
+        if (it.swapped) s += '<div class="swapnote">Swapped in for ' + esc(it.orig.name) + '</div>';
+        s += exCard(it.ex, ++n);
+      }
+      slides += '<div class="slide" data-i="' + i + '">' + s + '<div class="slidenav"><button type="button" data-go="' + (i - 1) + '"' + (i === 0 ? ' disabled' : '') + '>‹ Back</button>' + (i < total - 1 ? '<button type="button" class="primary" data-go="' + (i + 1) + '">Next exercise ›</button>' : '<button type="button" class="primary" data-go="finish">Finish workout ›</button>') + '</div></div>';
     });
+    h += '<div class="deckbar" id="deckbar"><b id="deckpos">1 of ' + total + '</b><span id="deckname"></span><div class="dots2">' + items.map((_, i) => '<i data-dot="' + i + '"></i>').join('') + '</div></div>';
+    h += '<div class="deck" id="deck">' + slides + '</div>';
+    h += '<p class="fine swipehint">Swipe left / right, or use the buttons.</p>';
     h += walkCard();
     h += '<div class="finish"><button type="button" id="finish" class="primary"' + (S.canWrite ? '' : ' disabled') + '>Finish workout + save</button><p class="fine">Saves your sets, ratings and pain. The plan then adapts: pain first, then form, then reps and feedback.</p></div>';
     h += stopRulesCard(true);
@@ -293,12 +340,11 @@
     h += '<div class="ex-top"><span class="num">' + n + '</span><div class="ex-head">';
     if (ex.ladder) h += '<div class="tag">' + P.LADDERS[ex.ladder].short + ' · STEP ' + SN(ex.step) + SNOF(ex.ladder) + ' ' + ladderDots(ex.ladder) + '</div>';
     else h += '<div class="tag">' + (ex.kind === 'big3' ? 'BIG 3 CORE BLOCK' : ex.kind === 'sub' ? 'MAIN PULL · ' + esc(ex.tendon) : 'TENDON · ' + esc(ex.tendon)) + '</div>';
-    h += '<h3>' + esc(ex.name) + '</h3><div class="dose">' + doseLine(ex) + '</div><div class="tempo">Tempo: ' + esc(ex.tempo) + '</div></div></div>';
+    h += '<h3>' + esc(ex.name) + '</h3></div></div>';
+    h += '<div class="chips2"><span>' + doseLine(ex) + '</span>' + (ex.tempo ? '<span>⏱ ' + esc(ex.tempo) + '</span>' : '') + '</div>';
     h += demoBtn(ex.id);
-    h += cueList(ex);
-    if (ex.feel) h += '<p class="feel"><b>Feel:</b> ' + esc(ex.feel) + '</p>';
-    if (ex.extra) h += '<p class="feel">' + esc(ex.extra) + '</p>';
-    h += restChips(ex.rest);
+    h += '<section class="sec"><h4>How to do it</h4>' + cueList(ex) + (ex.feel ? '<p class="feel"><b>Feel:</b> ' + esc(ex.feel) + '</p>' : '') + (ex.wrong ? '<p class="wrongtxt"><b>Avoid:</b> ' + esc(ex.wrong) + '</p>' : '') + (ex.extra ? '<p class="feel">' + esc(ex.extra) + '</p>' : '') + '</section>';
+    h += '<section class="sec"><h4>Rest</h4>' + restChips(ex.rest) + '</section>';
     if (ex.unlock) h += '<p class="unlock"><b>Level up:</b> ' + esc(ex.unlock) + '</p>';
     const lastE = entriesFor((e) => e.ex === ex.id).pop();
     if (lastE) h += '<p class="lasttime"><b>Last time (' + fmtDate(lastE.date) + '):</b> ' + (lastE.completed === false ? 'not done' : (lastE.sets || []).join(' · ') + ' ' + (/sec/.test(ex.unit) ? 'sec' : 'reps')) + (lastE.note ? ' — “' + esc(lastE.note) + '”' : '') + '</p>';
@@ -674,7 +720,9 @@
   document.addEventListener('click', async (ev) => {
     const t = ev.target.closest('button, a'); if (!t) return;
     if (t.dataset.demo) { openDemo(t.dataset.demo); return; }
-    if (t.dataset.day) { selDay = t.dataset.day; render(); return; }
+    if (t.dataset.go != null) { goSlide(t.dataset.go); return; }
+    if (t.dataset.dot != null) { goSlide(t.dataset.dot); return; }
+    if (t.dataset.day) { selDay = t.dataset.day; deckIdx = 0; render(); return; }
     if (t.id === 'dismiss') { lastResult = null; render(); return; }
     if (t.id === 'finish') { t.disabled = true; try { await finishWorkout(); } finally { t.disabled = false; } return; }
     if (t.dataset.check) { checkState.feel = t.dataset.check; render(); return; }
