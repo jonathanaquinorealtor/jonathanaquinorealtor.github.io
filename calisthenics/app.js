@@ -670,7 +670,7 @@
     try {
       if (!player) {
         player = window.DemoEngine.Player($('#pl-canvas'), {
-          caption: (c, w, beep) => { const el = $('#pl-cap'); el.textContent = c || ''; el.hidden = !c; el.className = 'cap' + (w ? ' wrong' : '') + (beep ? ' beep' : ''); },
+          caption: (c, w, beep, kind) => { const el = $('#pl-cap'); el.hidden = !c; el.className = 'cap' + (w ? ' wrong' : '') + (beep ? ' beep' : '') + (kind ? ' k-' + kind.toLowerCase() : ''); el.innerHTML = c ? (kind ? '<small>' + esc(kind) + '</small>' : '') + esc(c.replace(/^FEEL:\s*/, '')) : ''; },
           progress: (u) => { $('#pl-bar').style.width = (u * 100).toFixed(1) + '%'; },
         }, { style: 'fm', res: 0.013 });
       }

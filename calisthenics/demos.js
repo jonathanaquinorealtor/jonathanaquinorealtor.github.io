@@ -173,6 +173,9 @@
   D.partialSquat = squat({ py: 0.77, pz: -0.08, pit: 20, s: 48, pause: 0.6 }, 2);
   D.bwSquat = squat({ py: 0.56, pz: -0.15, pit: 38, s: 85, cap: 'HIPS BACK · KNEES OVER TOES' }, 3, squatWrong);
   D.bwSquat.f[1].nk = -14; D.bwSquat.f[3].nk = 0;
+  // your approved squat blips, as FORM captions
+  D.bwSquat.f[0].c = 'STAND TALL · BRACE'; D.bwSquat.f[1].c = 'KNEES TRACK OVER TOES'; D.bwSquat.f[2].c = 'CHEST UP - BACK STAYS FLAT'; D.bwSquat.f[3].c = 'DRIVE THROUGH HEELS';
+  D.bwSquat.f[D.bwSquat.f.length - 1].c = 'TIP - HEELS STAY DOWN · STOP ABOVE ROUNDING';
   D.tempoSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: '3 SEC DOWN', pause: 1, up: 1 }, 3);
   D.fastSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: 'DOWN SLOW · 3 SEC', pause: 0.4, up: 0.32, upEase: 'fast', upCap: 'STAND EXPLOSIVE!' }, 3, [{ h: 1.4, c: 'FEET STAY DOWN · REST 10 SEC' }]);
   D.beepSquat = {

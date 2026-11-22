@@ -190,6 +190,8 @@ td { color: var(--muted); }
 .stage { position: relative; aspect-ratio: 1 / 1; max-height: 64vh; width: 100%; background: #03070d; }
 #pl-canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .cap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: 92%; text-align: center; background: rgba(2, 8, 18, 0.82); color: #fff; border: 1px solid rgba(74, 163, 255, 0.55); font: 800 clamp(16px, 4.4vw, 22px)/1.1 var(--display); letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 14px; border-radius: 8px; box-shadow: 0 0 18px rgba(40, 130, 255, 0.35); animation: capIn 0.18s ease-out; }
+.cap small { display: block; font: 800 12px/1 var(--display); letter-spacing: 0.18em; margin-bottom: 4px; color: #6fb6ff; }
+.cap.k-setup small { color: #1fd1bd; } .cap.k-feel small { color: #3ddc84; } .cap.k-avoid small, .cap.wrong small { color: #ff6b72; }
 .cap.wrong { border-color: #ff4d57; color: #ffd6d8; box-shadow: 0 0 18px rgba(255, 60, 70, 0.45); }
 .cap.beep { border-color: #ffd24a; color: #fff3c4; }
 @keyframes capIn { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
@@ -382,11 +384,11 @@ td { color: var(--muted); }
     // torso
     R.abd = node('abd', P, 0, 0.11, 0, 'YXZ');
     add(R.abd, lathe(THREE, 0.2, [[0, 0.142], [0.45, 0.138], [1, 0.158]], skin, 32), 0, 0.2, 0).scale.set(1, 1, 0.72);
-    for (let i = 0; i < 3; i++) for (const sx of [-1, 1]) E(R.abd, skin, sx * 0.036, 0.05 + i * 0.05, 0.088, 0.034, 0.024, 0.016);
+    for (let i = 0; i < 3; i++) for (const sx of [-1, 1]) E(R.abd, skin, sx * 0.038, 0.05 + i * 0.052, 0.094, 0.036, 0.024, 0.024);
     E(R.abd, skin, 0.105, 0.09, 0.03, 0.04, 0.09, 0.05, 0, 0, -0.2); E(R.abd, skin, -0.105, 0.09, 0.03, 0.04, 0.09, 0.05, 0, 0, 0.2); // obliques
     R.chest = node('chest', R.abd, 0, 0.17, 0, 'YXZ'); const C = R.chest;
     E(C, skin, 0, 0.13, -0.01, 0.2, 0.18, 0.128);
-    E(C, skin, 0.078, 0.165, 0.072, 0.092, 0.068, 0.052, 0, 0, -0.12); E(C, skin, -0.078, 0.165, 0.072, 0.092, 0.068, 0.052, 0, 0, 0.12); // pecs
+    E(C, skin, 0.08, 0.162, 0.082, 0.095, 0.07, 0.062, 0, 0, -0.12); E(C, skin, -0.08, 0.162, 0.082, 0.095, 0.07, 0.062, 0, 0, 0.12); // pecs
     E(C, skin, 0.14, 0.1, -0.035, 0.085, 0.15, 0.09, 0, 0, 0.28); E(C, skin, -0.14, 0.1, -0.035, 0.085, 0.15, 0.09, 0, 0, -0.28); // lats
     E(C, skin, 0, 0.265, -0.035, 0.15, 0.07, 0.09); E(C, skin, 0.085, 0.28, -0.02, 0.075, 0.05, 0.065, 0, 0, -0.5); E(C, skin, -0.085, 0.28, -0.02, 0.075, 0.05, 0.065, 0, 0, 0.5);
     mk('upperBack', C, 0, 0.13, -0.02, 0.11); mk('chestM', C, 0, 0.12, 0.02, 0.11);
@@ -394,6 +396,10 @@ td { color: var(--muted); }
     add(R.neck, lathe(THREE, 0.12, [[0, 0.068], [1, 0.058]], skin), 0, 0.11, 0);
     R.head = node('head', R.neck, 0, 0.13, 0.012); const H = R.head;
     E(H, skin, 0, 0.012, 0, 0.09, 0.112, 0.104); E(H, skin, 0, -0.052, 0.04, 0.066, 0.058, 0.07);
+    E(H, skin, 0, 0.005, 0.098, 0.016, 0.03, 0.022); // nose
+    E(H, skin, 0, 0.04, 0.085, 0.07, 0.022, 0.03); // brow ridge
+    E(H, skin, 0.045, -0.005, 0.075, 0.025, 0.022, 0.02); E(H, skin, -0.045, -0.005, 0.075, 0.025, 0.022, 0.02); // cheekbones
+    E(H, skin, 0, -0.08, 0.06, 0.035, 0.022, 0.03); // chin
     const hb = new THREE.Mesh(new THREE.CylinderGeometry(0.098, 0.1, 0.045, 40, 1, true), band);
     hb.scale.set(1, 1, 1.12); add(H, hb, 0, 0.035, 0.002, -0.1);
     const knot = E(H, band, 0, 0.03, -0.11, 0.03, 0.025, 0.02);
@@ -556,7 +562,7 @@ td { color: var(--muted); }
       pos.push(glo.x + (i + sx / n) * res, glo.y + (j + sy / n) * res, glo.z + (k + sz / n) * res);
     }
     const idx = [];
-    const quad = (a, b, c, d, flip) => { if (a < 0 || b < 0 || c < 0 || d < 0) return; if (flip) idx.push(a, c, b, a, d, c); else idx.push(a, b, c, a, c, d); };
+    const quad = (a, b, c, d, flip) => { if (a < 0 || b < 0 || c < 0 || d < 0) return; if (!flip) idx.push(a, c, b, a, d, c); else idx.push(a, b, c, a, c, d); };
     for (let i = 1; i < nx - 1; i++) for (let j = 1; j < ny - 1; j++) for (let k = 1; k < nz - 1; k++) {
       const f0 = F[id3(i, j, k)];
       // x-edge
@@ -641,7 +647,19 @@ td { color: var(--muted); }
       if ('sol' in e) pose.sol = e.sol; // inherited unless overridden
       if ('flat' in e) pose.flat = e.flat;
       cur = pose;
-      frames.push({ d: raw.d || 0, h: (mode === 'F' ? raw.hh : raw.h) || 0, c: raw.c, w: !!raw.w, ease: raw.ease || 'ease', beep: !!raw.beep, pose });
+      frames.push({ d: raw.d || 0, h: (mode === 'F' ? raw.hh : raw.h) || 0, c: raw.c, w: !!raw.w, k: raw.w ? 'AVOID' : 'FORM', ease: raw.ease || 'ease', beep: !!raw.beep, pose });
+    }
+    const notes = demo.notes;
+    if (notes) {
+      // FEEL: at the longest non-mistake hold after the start (the hardest point of the rep)
+      if (notes.feel) {
+        let fi = -1, best = -1;
+        frames.forEach((f, i) => { if (i > 0 && !f.w && f.h > best) { best = f.h; fi = i; } });
+        if (fi < 0) fi = frames.length - 1;
+        frames.splice(fi + 1, 0, Object.assign({}, frames[fi], { d: 0, h: 1.8, c: notes.feel, k: 'FEEL', w: false, beep: false }));
+      }
+      // SETUP: hold the start position while the setup notes play
+      if (notes.setup) notes.setup.slice().reverse().forEach((t) => frames.unshift(Object.assign({}, frames[0], { d: 0, h: 1.8, c: t, k: 'SETUP', w: false, beep: false })));
     }
     // timeline
     let t = 0;
@@ -1039,8 +1057,8 @@ td { color: var(--muted); }
       // HUD
       if (hud) {
         const cap = s.frame ? (s.frame.c || '') : '';
-        const key = cap + '|' + (wrong ? 1 : 0);
-        if (key !== lastCap) { lastCap = key; hud.caption(cap, wrong, s.frame && s.frame.beep); }
+        const key = cap + '|' + (wrong ? 1 : 0) + '|' + (s.frame && s.frame.k);
+        if (key !== lastCap) { lastCap = key; hud.caption(cap, wrong, s.frame && s.frame.beep, s.frame && s.frame.k); }
         hud.progress(((time % C.total) + C.total) % C.total / C.total);
       }
     }
@@ -1256,6 +1274,9 @@ td { color: var(--muted); }
   D.partialSquat = squat({ py: 0.77, pz: -0.08, pit: 20, s: 48, pause: 0.6 }, 2);
   D.bwSquat = squat({ py: 0.56, pz: -0.15, pit: 38, s: 85, cap: 'HIPS BACK · KNEES OVER TOES' }, 3, squatWrong);
   D.bwSquat.f[1].nk = -14; D.bwSquat.f[3].nk = 0;
+  // your approved squat blips, as FORM captions
+  D.bwSquat.f[0].c = 'STAND TALL · BRACE'; D.bwSquat.f[1].c = 'KNEES TRACK OVER TOES'; D.bwSquat.f[2].c = 'CHEST UP - BACK STAYS FLAT'; D.bwSquat.f[3].c = 'DRIVE THROUGH HEELS';
+  D.bwSquat.f[D.bwSquat.f.length - 1].c = 'TIP - HEELS STAY DOWN · STOP ABOVE ROUNDING';
   D.tempoSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: '3 SEC DOWN', pause: 1, up: 1 }, 3);
   D.fastSquat = squat({ py: 0.6, pz: -0.14, pit: 36, s: 80, cap: 'DOWN SLOW · 3 SEC', pause: 0.4, up: 0.32, upEase: 'fast', upCap: 'STAND EXPLOSIVE!' }, 3, [{ h: 1.4, c: 'FEET STAY DOWN · REST 10 SEC' }]);
   D.beepSquat = {
@@ -1657,6 +1678,84 @@ td { color: var(--muted); }
 
   window.DEMOS = D;
 })();
+
+</script>
+<script>
+/* Setup + feel annotations for every demo. Short, all caps on screen.
+   setup: shown one at a time while the figure holds the start position.
+   feel: shown at the hardest point of the rep. */
+(function () {
+  const N = {
+    // push
+    wallPush: { setup: ['ARM\'S LENGTH FROM THE WALL', 'HANDS SHOULDER HEIGHT + WIDTH'], feel: 'FEEL: CHEST + BACK OF ARMS' },
+    kneePush: { setup: ['HANDS UNDER SHOULDERS', 'KNEES DOWN · SQUEEZE GLUTES'], feel: 'FEEL: CHEST + TRICEPS, NOT LOW BACK' },
+    negPush: { setup: ['TOP OF A PUSH-UP · HANDS UNDER SHOULDERS', 'GLUTES + ABS TIGHT · ONE LINE'], feel: 'FEEL: CHEST WORKING TO BRAKE' },
+    fullPush: { setup: ['HANDS A BIT WIDER THAN SHOULDERS', 'FEET TOGETHER · GLUTES TIGHT'], feel: 'FEEL: CHEST, SHOULDERS, TRICEPS' },
+    closePush: { setup: ['HANDS UNDER YOUR CHEST', 'KNEES DOWN · BODY IN ONE LINE'], feel: 'FEEL: BACK OF THE ARMS' },
+    pikePush: { setup: ['HANDS SHOULDER-WIDTH', 'WALK FEET IN · HIPS HIGH'], feel: 'FEEL: SHOULDERS DOING THE WORK' },
+    fastPress: { setup: ['KNEE PUSH-UP POSITION', 'HANDS STAY GLUED TO THE FLOOR'], feel: 'FEEL: A QUICK SNAP, NOT A GRIND' },
+    // pull
+    proneYTW: { setup: ['LIE FACE DOWN · FOREHEAD LIGHT', 'LEGS LONG · GLUTES GENTLY ON'], feel: 'FEEL: BETWEEN THE SHOULDER BLADES' },
+    proneYHold: { setup: ['LIE FACE DOWN · ARMS IN A Y', 'THUMBS UP · NECK LONG'], feel: 'FEEL: UPPER BACK BURNING, NOT NECK' },
+    backWidow: { setup: ['ON YOUR BACK · KNEES BENT', 'ELBOWS BENT AT YOUR SIDES'], feel: 'FEEL: BETWEEN SHOULDER BLADES' },
+    proneRowHold: { setup: ['LIE FACE DOWN · ARMS LONG', 'FOREHEAD LIGHT ON THE MAT'], feel: 'FEEL: MID BACK SQUEEZING' },
+    proneLongSqueeze: { setup: ['LIE FACE DOWN · ARMS LONG', 'SHOULDERS AWAY FROM EARS'], feel: 'FEEL: SHOULDER BLADES PINCHED' },
+    pronePullRibs: { setup: ['LIE FACE DOWN · ARMS OVERHEAD', 'LEGS LONG · LOW BACK QUIET'], feel: 'FEEL: LATS UNDER THE ARMPITS' },
+    fastProneRow: { setup: ['LIE FACE DOWN · ARMS LONG', 'GET READY TO SNAP BACK'], feel: 'FEEL: QUICK SQUEEZE, SLOW RETURN' },
+    advProneRow: { setup: ['LIE FACE DOWN · ARMS LONG', 'FOREHEAD LIGHT · GLUTES ON'], feel: 'FEEL: WHOLE UPPER BACK WORKING' },
+    tableRow: { setup: ['SHAKE THE TABLE FIRST · NO WOBBLE', 'GRIP THE EDGE · HEELS DOWN'], feel: 'FEEL: LATS + UPPER BACK + BICEPS' },
+    doorwayPull: { setup: ['GRIP BOTH SIDES OF THE FRAME', 'FEET CLOSE · LEAN BACK STRAIGHT'], feel: 'FEEL: BACK + ARMS PULLING HARD' },
+    // legs
+    partialSquat: { setup: ['FEET SHOULDER-WIDTH · TOES OUT', 'ARMS FORWARD · CHEST PROUD'], feel: 'FEEL: THIGHS + GLUTES' },
+    bwSquat: { setup: ['FEET SHOULDER-WIDTH - TOES OUT', 'ARMS FORWARD · CHEST PROUD'], feel: 'FEEL: THIGHS + GLUTES WORKING' },
+    tempoSquat: { setup: ['FEET SHOULDER-WIDTH · TOES OUT', 'BRACE: BREATH IN, ABS TIGHT'], feel: 'FEEL: THIGHS BURNING · CONTROL' },
+    fastSquat: { setup: ['FEET SHOULDER-WIDTH · TOES OUT', 'ARMS FORWARD FOR BALANCE'], feel: 'FEEL: A FAST PUSH THROUGH THE HIPS' },
+    beepSquat: { setup: ['FEET SHOULDER-WIDTH · TOES OUT', 'EYES + EARS READY FOR THE CUE'], feel: 'FEEL: QUICK, BALANCED, IN CONTROL' },
+    halfSquatHold: { setup: ['FEET SHOULDER-WIDTH · TOES OUT', 'ARMS FORWARD · CHEST PROUD'], feel: 'FEEL: THIGHS WORKING HARD · PAIN ≤3/10' },
+    splitSquat: { setup: ['ONE BIG STEP · FEET HIP-WIDTH', 'BACK HEEL UP · HANDS ON HIPS'], feel: 'FEEL: FRONT THIGH + GLUTE' },
+    splitHold: { setup: ['SPLIT STANCE · FEET HIP-WIDTH', 'BACK HEEL UP · TORSO TALL'], feel: 'FEEL: FRONT THIGH WORKING HARD' },
+    reverseLunge: { setup: ['FEET HIP-WIDTH · HANDS ON HIPS', 'WEIGHT ON THE FRONT FOOT'], feel: 'FEEL: FRONT GLUTE + THIGH' },
+    fastLunge: { setup: ['FEET HIP-WIDTH · HANDS ON HIPS', 'WEIGHT ON THE FRONT FOOT'], feel: 'FEEL: FRONT GLUTE FIRING FAST' },
+    skaterSquat: { setup: ['STAND ON ONE LEG', 'OTHER KNEE BENT BEHIND YOU'], feel: 'FEEL: STANDING GLUTE + THIGH' },
+    calfHold: { setup: ['FEET HIP-WIDTH · TOES FORWARD', 'FINGERTIP ON A WALL FOR BALANCE'], feel: 'FEEL: CALVES WORKING HARD' },
+    heelSnap: { setup: ['FEET HIP-WIDTH · TOES FORWARD', 'KNEES SOFT · STAND TALL'], feel: 'FEEL: SPRINGY CALVES' },
+    snapDown: { setup: ['FEET HIP-TO-SHOULDER WIDTH', 'STAND TALL · ARMS RELAXED'], feel: 'FEEL: QUIET, BALANCED LANDING SHAPE' },
+    // hinge & glute
+    gluteBridge: { setup: ['ON YOUR BACK · FEET HIP-WIDTH', 'HEELS A HAND\'S LENGTH FROM YOUR BUTT'], feel: 'FEEL: GLUTES + HAMSTRINGS, NOT LOW BACK' },
+    kickstandBridge: { setup: ['WORKING FOOT FLAT UNDER KNEE', 'HELPER HEEL OUT · BARELY TOUCHING'], feel: 'FEEL: WORKING-SIDE GLUTE' },
+    singleLegBridge: { setup: ['ONE FOOT FLAT UNDER KNEE', 'OTHER LEG LONG · ARMS ON THE MAT'], feel: 'FEEL: ONE GLUTE + HAMSTRING' },
+    bridgeHold: { setup: ['ON YOUR BACK · FEET HIP-WIDTH', 'RIBS DOWN · ARMS ON THE MAT'], feel: 'FEEL: GLUTES HOLDING, NOT LOW BACK' },
+    hipHinge: { setup: ['BACK TO A WALL · ONE FOOT AWAY', 'SOFT KNEES · ARMS CROSSED'], feel: 'FEEL: STRETCH IN BACK OF THIGHS' },
+    // Big 3 + core
+    birdDog: { setup: ['HANDS UNDER SHOULDERS', 'KNEES UNDER HIPS · BACK FLAT'], feel: 'FEEL: GLUTE + BACK OF SHOULDER' },
+    curlUp: { setup: ['ONE KNEE BENT · ONE LEG LONG', 'HANDS UNDER THE LOW BACK'], feel: 'FEEL: ABS BRACE · LOW BACK STILL' },
+    sidePlankKnees: { setup: ['ON YOUR SIDE · ELBOW UNDER SHOULDER', 'KNEES BENT · HIPS STACKED'], feel: 'FEEL: SIDE OF THE TRUNK' },
+    sidePlankFull: { setup: ['ON YOUR SIDE · ELBOW UNDER SHOULDER', 'LEGS LONG · FEET STACKED'], feel: 'FEEL: SIDE OF THE TRUNK + HIP' },
+    frontPlank: { setup: ['FOREARMS DOWN · ELBOWS UNDER SHOULDERS', 'SQUEEZE GLUTES · RIBS DOWN'], feel: 'FEEL: WHOLE TRUNK BRACED' },
+    plankShort: { setup: ['FOREARMS DOWN · ELBOWS UNDER SHOULDERS', 'SQUEEZE GLUTES · RIBS DOWN'], feel: 'FEEL: SHOULDERS + TRUNK WORKING' },
+    deadBug: { setup: ['ON YOUR BACK · ARMS TO CEILING', 'KNEES OVER HIPS · LOW BACK DOWN'], feel: 'FEEL: DEEP ABS KEEP BACK FLAT' },
+    // mobility
+    walkBreathe: { setup: ['WALK EASY · ARMS SWING', 'RELAX THE SHOULDERS'], feel: 'FEEL: LOOSE + WARM · BELLY RISES' },
+    hipCircles: { setup: ['FEET WIDER THAN HIPS', 'HANDS ON HIPS · SPINE TALL'], feel: 'FEEL: HIPS LOOSENING' },
+    armCircles: { setup: ['STAND TALL · FEET HIP-WIDTH', 'ARMS RELAXED AT YOUR SIDES'], feel: 'FEEL: SHOULDERS WARMING UP' },
+    wristPrep: { setup: ['ON ALL FOURS', 'FINGERS SPREAD · HANDS UNDER SHOULDERS'], feel: 'FEEL: GENTLE WRIST STRETCH' },
+    hip9090: { setup: ['SIT TALL · KNEES BENT 90°', 'HANDS BEHIND YOU FOR SUPPORT'], feel: 'FEEL: HIPS ROTATING, SPINE STILL' },
+    hipFlexor: { setup: ['HALF-KNEEL · BACK KNEE ON THE MAT', 'FRONT FOOT FLAT · TORSO TALL'], feel: 'FEEL: STRETCH AT FRONT OF BACK HIP' },
+    thoracicOpener: { setup: ['LIE FACE DOWN', 'ELBOWS UNDER SHOULDERS'], feel: 'FEEL: UPPER BACK OPENING' },
+    ankleRocks: { setup: ['HALF-KNEEL · FRONT FOOT FLAT', 'HANDS ON HIPS'], feel: 'FEEL: STRETCH IN FRONT CALF/ANKLE' },
+    bridgeClam: { setup: ['ON YOUR BACK · KNEES BENT', 'FEET HIP-WIDTH'], feel: 'FEEL: SIDE OF THE HIP' },
+    hamStretch: { setup: ['ON YOUR BACK · BACK FLAT', 'LIFT ONE LEG · HOLD BEHIND THIGH'], feel: 'FEEL: GENTLE PULL BEHIND THE THIGH' },
+    // reaction + footwork
+    pointStep: { setup: ['FEET WIDE · KNEES SOFT', 'WEIGHT ON THE BALLS OF FEET'], feel: 'FEEL: LIGHT + READY TO MOVE' },
+    numberSteps: { setup: ['FEET WIDE · KNEES SOFT', 'HANDS UP · EYES FORWARD'], feel: 'FEEL: QUICK FIRST STEP' },
+    handsUp: { setup: ['FEET WIDE · ARMS DOWN', 'STAY RELAXED UNTIL THE CUE'], feel: 'FEEL: SNAP, NOT TENSION' },
+    mirrorShuffle: { setup: ['FEET WIDE · KNEES SOFT', 'STAY LOW + LEVEL'], feel: 'FEEL: LEGS WORKING, HEAD STEADY' },
+    combos: { setup: ['LEFT FOOT FORWARD · BACK HEEL UP', 'HANDS BY CHIN · ELBOWS IN'], feel: 'FEEL: RELAXED, SNAP BACK TO GUARD' },
+    footwork: { setup: ['ONE FOOT A BIT FORWARD', 'KNEES SOFT · HANDS UP'], feel: 'FEEL: LIGHT ON THE BALLS OF FEET' },
+  };
+  window.DEMO_NOTES = N;
+})();
+(function () { if (window.DEMOS && window.DEMO_NOTES) for (const k in window.DEMOS) window.DEMOS[k].notes = window.DEMO_NOTES[k] || null; })();
 
 </script>
 <script>
@@ -2546,7 +2645,7 @@ td { color: var(--muted); }
     try {
       if (!player) {
         player = window.DemoEngine.Player($('#pl-canvas'), {
-          caption: (c, w, beep) => { const el = $('#pl-cap'); el.textContent = c || ''; el.hidden = !c; el.className = 'cap' + (w ? ' wrong' : '') + (beep ? ' beep' : ''); },
+          caption: (c, w, beep, kind) => { const el = $('#pl-cap'); el.hidden = !c; el.className = 'cap' + (w ? ' wrong' : '') + (beep ? ' beep' : '') + (kind ? ' k-' + kind.toLowerCase() : ''); el.innerHTML = c ? (kind ? '<small>' + esc(kind) + '</small>' : '') + esc(c.replace(/^FEEL:\s*/, '')) : ''; },
           progress: (u) => { $('#pl-bar').style.width = (u * 100).toFixed(1) + '%'; },
         }, { style: 'fm', res: 0.013 });
       }

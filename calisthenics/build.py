@@ -2,7 +2,7 @@
 import pathlib
 d = pathlib.Path(__file__).parent
 s = (d/'shell.html').read_text()
-for tag, f in [('ENGINE','demo-engine.js'),('DEMOS','demos.js'),('PLAN','plan-data.js'),('APP','app.js')]:
+for tag, f in [('ENGINE','demo-engine.js'),('DEMOS','demos.js'),('NOTES','demo-notes.js'),('PLAN','plan-data.js'),('APP','app.js')]:
     js = (d/f).read_text()
     assert '</script' not in js, f
     s = s.replace('<script>/*%s*/</script>' % tag, '<script>\n' + js + '\n</script>')

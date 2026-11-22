@@ -1,10 +1,10 @@
 <html><head><meta charset=utf-8></head><body style="margin:0;background:#000">
 <canvas id="c" style="width:720px;height:720px;display:block"></canvas>
-<script src="three.min.js"></script><script src="demo-engine.js"></script><script src="demos.js"></script>
+<script src="three.min.js"></script><script src="demo-engine.js"></script><script src="demos.js"></script><script src="demo-notes.js"></script>
 <script>
 window.P = DemoEngine.Player(document.getElementById('c'), null, {style: new URLSearchParams(location.search).get('s')||'fm', noMat:true, res:0.009});
 P.resize();
 window.load = (name)=>{ P.setDemo(DEMOS[name]); const C = DemoEngine.compile(DEMOS[name]);
-  return {total:P.total(), caps:C.frames.map(f=>({t0:f.t0,t2:f.t2,c:f.c||'',w:f.w}))}; };
+  return {total:P.total(), caps:C.frames.map(f=>({t0:f.t0,t2:f.t2,c:f.c||'',w:f.w,k:f.k}))}; };
 window.frame = (t)=>{ P.renderAt(t); return document.getElementById('c').toDataURL('image/jpeg',0.9); };
 </script></body></html>

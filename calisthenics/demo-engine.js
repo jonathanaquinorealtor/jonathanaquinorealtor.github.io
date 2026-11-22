@@ -152,11 +152,11 @@
     // torso
     R.abd = node('abd', P, 0, 0.11, 0, 'YXZ');
     add(R.abd, lathe(THREE, 0.2, [[0, 0.142], [0.45, 0.138], [1, 0.158]], skin, 32), 0, 0.2, 0).scale.set(1, 1, 0.72);
-    for (let i = 0; i < 3; i++) for (const sx of [-1, 1]) E(R.abd, skin, sx * 0.036, 0.05 + i * 0.05, 0.088, 0.034, 0.024, 0.016);
+    for (let i = 0; i < 3; i++) for (const sx of [-1, 1]) E(R.abd, skin, sx * 0.038, 0.05 + i * 0.052, 0.094, 0.036, 0.024, 0.024);
     E(R.abd, skin, 0.105, 0.09, 0.03, 0.04, 0.09, 0.05, 0, 0, -0.2); E(R.abd, skin, -0.105, 0.09, 0.03, 0.04, 0.09, 0.05, 0, 0, 0.2); // obliques
     R.chest = node('chest', R.abd, 0, 0.17, 0, 'YXZ'); const C = R.chest;
     E(C, skin, 0, 0.13, -0.01, 0.2, 0.18, 0.128);
-    E(C, skin, 0.078, 0.165, 0.072, 0.092, 0.068, 0.052, 0, 0, -0.12); E(C, skin, -0.078, 0.165, 0.072, 0.092, 0.068, 0.052, 0, 0, 0.12); // pecs
+    E(C, skin, 0.08, 0.162, 0.082, 0.095, 0.07, 0.062, 0, 0, -0.12); E(C, skin, -0.08, 0.162, 0.082, 0.095, 0.07, 0.062, 0, 0, 0.12); // pecs
     E(C, skin, 0.14, 0.1, -0.035, 0.085, 0.15, 0.09, 0, 0, 0.28); E(C, skin, -0.14, 0.1, -0.035, 0.085, 0.15, 0.09, 0, 0, -0.28); // lats
     E(C, skin, 0, 0.265, -0.035, 0.15, 0.07, 0.09); E(C, skin, 0.085, 0.28, -0.02, 0.075, 0.05, 0.065, 0, 0, -0.5); E(C, skin, -0.085, 0.28, -0.02, 0.075, 0.05, 0.065, 0, 0, 0.5);
     mk('upperBack', C, 0, 0.13, -0.02, 0.11); mk('chestM', C, 0, 0.12, 0.02, 0.11);
@@ -164,6 +164,10 @@
     add(R.neck, lathe(THREE, 0.12, [[0, 0.068], [1, 0.058]], skin), 0, 0.11, 0);
     R.head = node('head', R.neck, 0, 0.13, 0.012); const H = R.head;
     E(H, skin, 0, 0.012, 0, 0.09, 0.112, 0.104); E(H, skin, 0, -0.052, 0.04, 0.066, 0.058, 0.07);
+    E(H, skin, 0, 0.005, 0.098, 0.016, 0.03, 0.022); // nose
+    E(H, skin, 0, 0.04, 0.085, 0.07, 0.022, 0.03); // brow ridge
+    E(H, skin, 0.045, -0.005, 0.075, 0.025, 0.022, 0.02); E(H, skin, -0.045, -0.005, 0.075, 0.025, 0.022, 0.02); // cheekbones
+    E(H, skin, 0, -0.08, 0.06, 0.035, 0.022, 0.03); // chin
     const hb = new THREE.Mesh(new THREE.CylinderGeometry(0.098, 0.1, 0.045, 40, 1, true), band);
     hb.scale.set(1, 1, 1.12); add(H, hb, 0, 0.035, 0.002, -0.1);
     const knot = E(H, band, 0, 0.03, -0.11, 0.03, 0.025, 0.02);
@@ -326,7 +330,7 @@
       pos.push(glo.x + (i + sx / n) * res, glo.y + (j + sy / n) * res, glo.z + (k + sz / n) * res);
     }
     const idx = [];
-    const quad = (a, b, c, d, flip) => { if (a < 0 || b < 0 || c < 0 || d < 0) return; if (flip) idx.push(a, c, b, a, d, c); else idx.push(a, b, c, a, c, d); };
+    const quad = (a, b, c, d, flip) => { if (a < 0 || b < 0 || c < 0 || d < 0) return; if (!flip) idx.push(a, c, b, a, d, c); else idx.push(a, b, c, a, c, d); };
     for (let i = 1; i < nx - 1; i++) for (let j = 1; j < ny - 1; j++) for (let k = 1; k < nz - 1; k++) {
       const f0 = F[id3(i, j, k)];
       // x-edge
@@ -411,7 +415,19 @@
       if ('sol' in e) pose.sol = e.sol; // inherited unless overridden
       if ('flat' in e) pose.flat = e.flat;
       cur = pose;
-      frames.push({ d: raw.d || 0, h: (mode === 'F' ? raw.hh : raw.h) || 0, c: raw.c, w: !!raw.w, ease: raw.ease || 'ease', beep: !!raw.beep, pose });
+      frames.push({ d: raw.d || 0, h: (mode === 'F' ? raw.hh : raw.h) || 0, c: raw.c, w: !!raw.w, k: raw.w ? 'AVOID' : 'FORM', ease: raw.ease || 'ease', beep: !!raw.beep, pose });
+    }
+    const notes = demo.notes;
+    if (notes) {
+      // FEEL: at the longest non-mistake hold after the start (the hardest point of the rep)
+      if (notes.feel) {
+        let fi = -1, best = -1;
+        frames.forEach((f, i) => { if (i > 0 && !f.w && f.h > best) { best = f.h; fi = i; } });
+        if (fi < 0) fi = frames.length - 1;
+        frames.splice(fi + 1, 0, Object.assign({}, frames[fi], { d: 0, h: 1.8, c: notes.feel, k: 'FEEL', w: false, beep: false }));
+      }
+      // SETUP: hold the start position while the setup notes play
+      if (notes.setup) notes.setup.slice().reverse().forEach((t) => frames.unshift(Object.assign({}, frames[0], { d: 0, h: 1.8, c: t, k: 'SETUP', w: false, beep: false })));
     }
     // timeline
     let t = 0;
@@ -809,8 +825,8 @@
       // HUD
       if (hud) {
         const cap = s.frame ? (s.frame.c || '') : '';
-        const key = cap + '|' + (wrong ? 1 : 0);
-        if (key !== lastCap) { lastCap = key; hud.caption(cap, wrong, s.frame && s.frame.beep); }
+        const key = cap + '|' + (wrong ? 1 : 0) + '|' + (s.frame && s.frame.k);
+        if (key !== lastCap) { lastCap = key; hud.caption(cap, wrong, s.frame && s.frame.beep, s.frame && s.frame.k); }
         hud.progress(((time % C.total) + C.total) % C.total / C.total);
       }
     }
