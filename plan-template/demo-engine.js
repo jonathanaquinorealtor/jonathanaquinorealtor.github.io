@@ -384,7 +384,7 @@
   }
 
   // ---------- pose math ----------
-  const SYM = ['s', 'a', 't', 'e', 'h', 'b', 'r', 'k', 'f', 'z', 'y', 'o'];
+  const SYM = ['s', 'a', 't', 'e', 'h', 'b', 'r', 'k', 'f', 'z', 'y', 'o', 'x'];
   const BASE_S = { m: 'S', py: 0.955, pz: 0, px: 0, pit: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, zL: 0, zR: 0, xL: 0.12, xR: -0.12, yL: 0, yR: 0, fL: 0, fR: 0, oL: 8, oR: 8, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
   const BASE_F = { m: 'F', pit: 0, spin: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, hL: 0, hR: 0, bL: 0, bR: 0, rL: 0, rR: 0, kL: 0, kR: 0, fL: 0, fR: 0, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
 
@@ -498,7 +498,9 @@
         const sd = s === 'L' ? 1 : -1;
         const hip = R['hip' + s], kn = R['kn' + s], an = R['an' + s];
         const fdeg = p['f' + s], o = (p['o' + s] || 0) * D2R;
-        const A = new THREE.Vector3(p['x' + s], 0.07 + 0.16 * Math.sin(Math.max(0, fdeg) * D2R) + p['y' + s], p['z' + s]);
+        const fr0 = fdeg * D2R; // exact ankle height so the lowest part of the foot (toe, heel or ankle) touches the floor
+        const footDrop = Math.max(0.045 * Math.cos(fr0) + 0.16 * Math.sin(fr0) + 0.025, 0.035 * Math.cos(fr0) - 0.02 * Math.sin(fr0) + 0.035, 0.045);
+        const A = new THREE.Vector3(p['x' + s], 0.012 + footDrop + p['y' + s], p['z' + s]);
         const H = new THREE.Vector3(); hip.getWorldPosition(H); fig.worldToLocal(H);
         const fwdH = new THREE.Vector3(Math.sin(o) * sd, 0, Math.cos(o));
         const d = A.clone().sub(H); let dist = d.length(); const dn = d.clone().normalize();
@@ -575,37 +577,35 @@
     R.root.position.y += (gy || 0) - min;
     fig.updateMatrixWorld(true);
   }
+  // Contact solver. p.sol can be one solver or a list applied in order. Each one adjusts a single
+  // parameter until two contacts sit at the same height (or a given offset):
+  // p: 'pit' (whole-body tilt), 'sp' (spine flex), 'spS' (spine side-bend), 'k' / 'kL' / 'kR' (knees), 'h' / 'hL' / 'hR' (hips)
   function solve(fig, p) {
     const R = fig.userData.R;
-    const s = p.sol;
-    const read1 = (name) => {
-      const m = R[name]; const v = wpos(m, tmpV()); fig.worldToLocal(v);
-      return { x: v.x, y: v.y - m.userData.r, z: v.z };
-    };
-    const read = (n) => {
-      if (!Array.isArray(n)) return read1(n);
-      let best = null; for (const k of n) { const r = read1(k); if (!best || r.y < best.y) best = r; } return best;
-    };
-    const ax = s.ax || 'y';
-    const v = s.v || 0;
-    const setP = (val) => {
-      if (s.p === 'pit') R.tilt.rotation.x = val * D2R;
-      else if (s.p === 'sp') { R.abd.rotation.x = val * 0.5 * D2R; R.chest.rotation.x = val * 0.5 * D2R; }
-      if (s.p === 'pit') setFeet(R, Object.assign({}, p, { pit: val }));
-      fig.updateMatrixWorld(true);
-      const A = read(s.a), B = read(s.b);
-      return (A[ax] - B[ax]) - v;
-    };
-    let lo = s.lo, hi = s.hi;
-    let flo = setP(lo), fhi = setP(hi);
-    if (flo * fhi > 0) { // no sign change: pick closest
-      setP(Math.abs(flo) < Math.abs(fhi) ? lo : hi); return;
+    const list = Array.isArray(p.sol) ? p.sol : [p.sol];
+    const cur = Object.assign({}, p);
+    const read1 = (name) => { const m = R[name]; const v = wpos(m, tmpV()); fig.worldToLocal(v); return { x: v.x, y: v.y - m.userData.r, z: v.z }; };
+    const read = (n) => { if (!Array.isArray(n)) return read1(n); let best = null; for (const k of n) { const r = read1(k); if (!best || r.y < best.y) best = r; } return best; };
+    for (const s of list) {
+      if (!s) continue;
+      const ax = s.ax || 'y', v = s.v || 0;
+      const setP = (val) => {
+        if (s.p === 'pit') { R.tilt.rotation.x = val * D2R; cur.pit = val; }
+        else if (s.p === 'sp') { R.abd.rotation.x = val * 0.5 * D2R; R.chest.rotation.x = val * 0.5 * D2R; cur.sp = val; }
+        else if (s.p === 'spS') { R.abd.rotation.z = val * 0.5 * D2R; R.chest.rotation.z = val * 0.5 * D2R; cur.spS = val; }
+        else if (/^k[LR]?$/.test(s.p)) { for (const sd of s.p === 'k' ? ['L', 'R'] : [s.p[1]]) { R['kn' + sd].rotation.x = val * D2R; cur['k' + sd] = val; } }
+        else if (/^h[LR]?$/.test(s.p)) { for (const sd of s.p === 'h' ? ['L', 'R'] : [s.p[1]]) { R['hip' + sd].rotation.x = -val * D2R; cur['h' + sd] = val; } }
+        setFeet(R, cur);
+        fig.updateMatrixWorld(true);
+        const A = read(s.a), B = read(s.b);
+        return (A[ax] - B[ax]) - v;
+      };
+      let lo = s.lo, hi = s.hi;
+      let flo = setP(lo), fhi = setP(hi);
+      if (flo * fhi > 0) { setP(Math.abs(flo) < Math.abs(fhi) ? lo : hi); continue; }
+      for (let i = 0; i < 28; i++) { const mid = (lo + hi) / 2; const fm = setP(mid); if (fm * flo <= 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; } }
+      setP((lo + hi) / 2);
     }
-    for (let i = 0; i < 28; i++) {
-      const mid = (lo + hi) / 2; const fm = setP(mid);
-      if (fm * flo <= 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
-    }
-    setP((lo + hi) / 2);
   }
 
   // ---------- stage ----------
@@ -741,8 +741,24 @@
     const propGroup = new THREE.Group(); scene.add(propGroup);
     const propMat = mk(0x1b2633, 0.6, 0.2);
     const propMatHi = mk(0x22364d, 0.45, 0.3);
+    // Equipment props. Static: wall, table, door, bench, bar. Hand-held (follow the hands): dumbbell, kettlebell. Between the hands: barbell, band.
+    const held = []; let spans = [];
+    const metal = mk(0x9aa3ad, 0.3, 0.9), rubber = mk(0x15171b, 0.6, 0.1), bandMat = mk(0x2bd17e, 0.5, 0.0);
+    function makeDumbbell() { const g = new THREE.Group(); const h = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.16, 12), metal); h.rotation.z = Math.PI / 2; g.add(h); for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.06, 20), rubber); p.rotation.z = Math.PI / 2; p.position.x = sx * 0.1; g.add(p); } return g; }
+    function makeKettlebell() { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 18), rubber); b.position.y = -0.13; g.add(b); const hd = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.014, 10, 24, Math.PI), rubber); hd.position.y = -0.04; g.add(hd); return g; }
+    function attachHeld(type, side, rig) {
+      const R2 = rig.userData.R; const sides = side === 'both' ? ['L', 'R'] : [side];
+      for (const s2 of sides) {
+        const m = type === 'kettlebell' ? makeKettlebell() : makeDumbbell();
+        m.position.set(0, -0.055, 0.0); if (type === 'kettlebell') m.position.set(s2 === 'L' ? -0.04 : 0.04, -0.06, 0.03);
+        R2['wr' + s2].add(m); held.push(m);
+        if (type === 'kettlebell' && side === 'both') break;
+      }
+    }
     function buildProps(demo, C) {
       while (propGroup.children.length) propGroup.remove(propGroup.children[0]);
+      while (held.length) { const m = held.pop(); if (m.parent) m.parent.remove(m); }
+      spans = [];
       mat.visible = demo.mat !== false && !opts.noMat;
       for (const pr of (demo.props || [])) {
         // position may come from a marker at a frame
@@ -771,10 +787,43 @@
             post.position.set(sx * (Math.abs(px) + 0.07), 1.1, pz); propGroup.add(post);
           }
           const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.09, 0.14), propMatHi); lintel.position.set(0, 2.2, pz); propGroup.add(lintel);
+        } else if (pr.type === 'bench') {
+          // bench top sits under the given marker (e.g. a supporting hand or knee)
+          const r = pr.at ? fig.userData.R[pr.at].userData.r : 0; const top = (pr.h != null ? pr.h : py - r);
+          const b = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.06, pr.len || 1.1), propMatHi); b.position.set(pr.x != null ? pr.x : px, top - 0.03, pz + (pr.dzc || 0)); propGroup.add(b);
+          for (const lz of [-1, 1]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.28, top - 0.06, 0.05), propMat); leg.position.set(b.position.x, (top - 0.06) / 2, b.position.z + lz * ((pr.len || 1.1) / 2 - 0.08)); propGroup.add(leg); }
+        } else if (pr.type === 'bar') {
+          const r = pr.at ? fig.userData.R[pr.at].userData.r : 0;
+          const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.3, 14), metal); bar.rotation.z = Math.PI / 2; bar.position.set(0, py + (pr.dy != null ? pr.dy : r * 0.3), pz); propGroup.add(bar);
+          for (const sx of [-1, 1]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.07, py + 0.2, 0.07), propMatHi); post.position.set(sx * 0.68, (py + 0.2) / 2, pz); propGroup.add(post); }
+        } else if (pr.type === 'dumbbell' || pr.type === 'kettlebell') {
+          attachHeld(pr.type, pr.hand || 'both', fig); attachHeld(pr.type, pr.hand || 'both', mir);
+        } else if (pr.type === 'barbell' || pr.type === 'band') {
+          const m = pr.type === 'barbell'
+            ? (() => { const g = new THREE.Group(); const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.6, 12), metal); bar.rotation.z = Math.PI / 2; g.add(bar); for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 28), rubber); p.rotation.z = Math.PI / 2; p.position.x = sx * 0.62; g.add(p); } return g; })()
+            : new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1, 8), bandMat);
+          propGroup.add(m); spans.push({ m, type: pr.type });
         }
       }
     }
     function ctxFor(C, pose) { return { anchor: C.anchor || null, groundY: 0.012 }; }
+    function updateSpans() {
+      if (!spans.length) return;
+      const R0 = fig.userData.R; const a = wpos(R0.handL, tmpV()), b = wpos(R0.handR, tmpV());
+      for (const sp of spans) {
+        const mid = a.clone().add(b).multiplyScalar(0.5); sp.m.position.copy(mid);
+        const dir = b.clone().sub(a); const len = dir.length(); dir.normalize();
+        if (sp.type === 'band') { sp.m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir); sp.m.scale.set(1, Math.max(0.05, len), 1); }
+        else sp.m.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir);
+      }
+    }
+    // Measurement hook for automatic checks: pose + every contact marker (fig space) at time t.
+    function probe(t) {
+      time = t; const s = sample(C, time); applyPose(fig, s.pose, ctxFor(C, s.pose));
+      const out = {}; for (const m of fig.userData.R.markers) { const v = wpos(m, tmpV()); fig.worldToLocal(v); out[m.name] = [v.x, v.y, v.z, m.userData.r]; }
+      const Rr = fig.userData.R; const solved = { pit: Rr.tilt.rotation.x / D2R, kL: Rr.knL.rotation.x / D2R, kR: Rr.knR.rotation.x / D2R };
+      return { pose: s.pose, solved, cap: s.frame ? s.frame.c : '', kind: s.frame ? s.frame.k : '', wrong: !!(s.frame && s.frame.w), markers: out };
+    }
 
     let C = null, time = 0, playing = true, speed = 1, last = 0, raf = 0;
     let az = 50, el = 10, dist = 3.5, ty = 0.8, userAz = 0, userEl = 0;
@@ -805,6 +854,7 @@
       if (!C) return;
       const s = sample(C, time);
       applyPose(fig, s.pose, ctxFor(C, s.pose));
+      updateSpans();
       // mirror copy
       for (let i = 0; i < nodesA.length; i++) { nodesB[i].position.copy(nodesA[i].position); nodesB[i].quaternion.copy(nodesA[i].quaternion); }
       // shadow follows pelvis
@@ -849,7 +899,7 @@
     canvas.addEventListener('pointercancel', () => { drag = null; });
 
     return {
-      setDemo, resize, scene,
+      setDemo, resize, scene, probe,
       start() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); } },
       stop() { cancelAnimationFrame(raf); raf = 0; },
       play(v) { playing = v; }, isPlaying: () => playing,

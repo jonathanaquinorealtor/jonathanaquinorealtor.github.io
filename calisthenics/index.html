@@ -649,7 +649,7 @@ td { color: var(--muted); }
   }
 
   // ---------- pose math ----------
-  const SYM = ['s', 'a', 't', 'e', 'h', 'b', 'r', 'k', 'f', 'z', 'y', 'o'];
+  const SYM = ['s', 'a', 't', 'e', 'h', 'b', 'r', 'k', 'f', 'z', 'y', 'o', 'x'];
   const BASE_S = { m: 'S', py: 0.955, pz: 0, px: 0, pit: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, zL: 0, zR: 0, xL: 0.12, xR: -0.12, yL: 0, yR: 0, fL: 0, fR: 0, oL: 8, oR: 8, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
   const BASE_F = { m: 'F', pit: 0, spin: 0, yaw: 0, sp: 0, spT: 0, spS: 0, nk: 0, hL: 0, hR: 0, bL: 0, bR: 0, rL: 0, rR: 0, kL: 0, kR: 0, fL: 0, fR: 0, sL: 0, sR: 0, aL: 7, aR: 7, tL: 0, tR: 0, eL: 10, eR: 10 };
 
@@ -763,7 +763,9 @@ td { color: var(--muted); }
         const sd = s === 'L' ? 1 : -1;
         const hip = R['hip' + s], kn = R['kn' + s], an = R['an' + s];
         const fdeg = p['f' + s], o = (p['o' + s] || 0) * D2R;
-        const A = new THREE.Vector3(p['x' + s], 0.07 + 0.16 * Math.sin(Math.max(0, fdeg) * D2R) + p['y' + s], p['z' + s]);
+        const fr0 = fdeg * D2R; // exact ankle height so the lowest part of the foot (toe, heel or ankle) touches the floor
+        const footDrop = Math.max(0.045 * Math.cos(fr0) + 0.16 * Math.sin(fr0) + 0.025, 0.035 * Math.cos(fr0) - 0.02 * Math.sin(fr0) + 0.035, 0.045);
+        const A = new THREE.Vector3(p['x' + s], 0.012 + footDrop + p['y' + s], p['z' + s]);
         const H = new THREE.Vector3(); hip.getWorldPosition(H); fig.worldToLocal(H);
         const fwdH = new THREE.Vector3(Math.sin(o) * sd, 0, Math.cos(o));
         const d = A.clone().sub(H); let dist = d.length(); const dn = d.clone().normalize();
@@ -840,37 +842,35 @@ td { color: var(--muted); }
     R.root.position.y += (gy || 0) - min;
     fig.updateMatrixWorld(true);
   }
+  // Contact solver. p.sol can be one solver or a list applied in order. Each one adjusts a single
+  // parameter until two contacts sit at the same height (or a given offset):
+  // p: 'pit' (whole-body tilt), 'sp' (spine flex), 'spS' (spine side-bend), 'k' / 'kL' / 'kR' (knees), 'h' / 'hL' / 'hR' (hips)
   function solve(fig, p) {
     const R = fig.userData.R;
-    const s = p.sol;
-    const read1 = (name) => {
-      const m = R[name]; const v = wpos(m, tmpV()); fig.worldToLocal(v);
-      return { x: v.x, y: v.y - m.userData.r, z: v.z };
-    };
-    const read = (n) => {
-      if (!Array.isArray(n)) return read1(n);
-      let best = null; for (const k of n) { const r = read1(k); if (!best || r.y < best.y) best = r; } return best;
-    };
-    const ax = s.ax || 'y';
-    const v = s.v || 0;
-    const setP = (val) => {
-      if (s.p === 'pit') R.tilt.rotation.x = val * D2R;
-      else if (s.p === 'sp') { R.abd.rotation.x = val * 0.5 * D2R; R.chest.rotation.x = val * 0.5 * D2R; }
-      if (s.p === 'pit') setFeet(R, Object.assign({}, p, { pit: val }));
-      fig.updateMatrixWorld(true);
-      const A = read(s.a), B = read(s.b);
-      return (A[ax] - B[ax]) - v;
-    };
-    let lo = s.lo, hi = s.hi;
-    let flo = setP(lo), fhi = setP(hi);
-    if (flo * fhi > 0) { // no sign change: pick closest
-      setP(Math.abs(flo) < Math.abs(fhi) ? lo : hi); return;
+    const list = Array.isArray(p.sol) ? p.sol : [p.sol];
+    const cur = Object.assign({}, p);
+    const read1 = (name) => { const m = R[name]; const v = wpos(m, tmpV()); fig.worldToLocal(v); return { x: v.x, y: v.y - m.userData.r, z: v.z }; };
+    const read = (n) => { if (!Array.isArray(n)) return read1(n); let best = null; for (const k of n) { const r = read1(k); if (!best || r.y < best.y) best = r; } return best; };
+    for (const s of list) {
+      if (!s) continue;
+      const ax = s.ax || 'y', v = s.v || 0;
+      const setP = (val) => {
+        if (s.p === 'pit') { R.tilt.rotation.x = val * D2R; cur.pit = val; }
+        else if (s.p === 'sp') { R.abd.rotation.x = val * 0.5 * D2R; R.chest.rotation.x = val * 0.5 * D2R; cur.sp = val; }
+        else if (s.p === 'spS') { R.abd.rotation.z = val * 0.5 * D2R; R.chest.rotation.z = val * 0.5 * D2R; cur.spS = val; }
+        else if (/^k[LR]?$/.test(s.p)) { for (const sd of s.p === 'k' ? ['L', 'R'] : [s.p[1]]) { R['kn' + sd].rotation.x = val * D2R; cur['k' + sd] = val; } }
+        else if (/^h[LR]?$/.test(s.p)) { for (const sd of s.p === 'h' ? ['L', 'R'] : [s.p[1]]) { R['hip' + sd].rotation.x = -val * D2R; cur['h' + sd] = val; } }
+        setFeet(R, cur);
+        fig.updateMatrixWorld(true);
+        const A = read(s.a), B = read(s.b);
+        return (A[ax] - B[ax]) - v;
+      };
+      let lo = s.lo, hi = s.hi;
+      let flo = setP(lo), fhi = setP(hi);
+      if (flo * fhi > 0) { setP(Math.abs(flo) < Math.abs(fhi) ? lo : hi); continue; }
+      for (let i = 0; i < 28; i++) { const mid = (lo + hi) / 2; const fm = setP(mid); if (fm * flo <= 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; } }
+      setP((lo + hi) / 2);
     }
-    for (let i = 0; i < 28; i++) {
-      const mid = (lo + hi) / 2; const fm = setP(mid);
-      if (fm * flo <= 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
-    }
-    setP((lo + hi) / 2);
   }
 
   // ---------- stage ----------
@@ -1006,8 +1006,24 @@ td { color: var(--muted); }
     const propGroup = new THREE.Group(); scene.add(propGroup);
     const propMat = mk(0x1b2633, 0.6, 0.2);
     const propMatHi = mk(0x22364d, 0.45, 0.3);
+    // Equipment props. Static: wall, table, door, bench, bar. Hand-held (follow the hands): dumbbell, kettlebell. Between the hands: barbell, band.
+    const held = []; let spans = [];
+    const metal = mk(0x9aa3ad, 0.3, 0.9), rubber = mk(0x15171b, 0.6, 0.1), bandMat = mk(0x2bd17e, 0.5, 0.0);
+    function makeDumbbell() { const g = new THREE.Group(); const h = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.16, 12), metal); h.rotation.z = Math.PI / 2; g.add(h); for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.06, 20), rubber); p.rotation.z = Math.PI / 2; p.position.x = sx * 0.1; g.add(p); } return g; }
+    function makeKettlebell() { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 18), rubber); b.position.y = -0.13; g.add(b); const hd = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.014, 10, 24, Math.PI), rubber); hd.position.y = -0.04; g.add(hd); return g; }
+    function attachHeld(type, side, rig) {
+      const R2 = rig.userData.R; const sides = side === 'both' ? ['L', 'R'] : [side];
+      for (const s2 of sides) {
+        const m = type === 'kettlebell' ? makeKettlebell() : makeDumbbell();
+        m.position.set(0, -0.055, 0.0); if (type === 'kettlebell') m.position.set(s2 === 'L' ? -0.04 : 0.04, -0.06, 0.03);
+        R2['wr' + s2].add(m); held.push(m);
+        if (type === 'kettlebell' && side === 'both') break;
+      }
+    }
     function buildProps(demo, C) {
       while (propGroup.children.length) propGroup.remove(propGroup.children[0]);
+      while (held.length) { const m = held.pop(); if (m.parent) m.parent.remove(m); }
+      spans = [];
       mat.visible = demo.mat !== false && !opts.noMat;
       for (const pr of (demo.props || [])) {
         // position may come from a marker at a frame
@@ -1036,10 +1052,43 @@ td { color: var(--muted); }
             post.position.set(sx * (Math.abs(px) + 0.07), 1.1, pz); propGroup.add(post);
           }
           const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.09, 0.14), propMatHi); lintel.position.set(0, 2.2, pz); propGroup.add(lintel);
+        } else if (pr.type === 'bench') {
+          // bench top sits under the given marker (e.g. a supporting hand or knee)
+          const r = pr.at ? fig.userData.R[pr.at].userData.r : 0; const top = (pr.h != null ? pr.h : py - r);
+          const b = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.06, pr.len || 1.1), propMatHi); b.position.set(pr.x != null ? pr.x : px, top - 0.03, pz + (pr.dzc || 0)); propGroup.add(b);
+          for (const lz of [-1, 1]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.28, top - 0.06, 0.05), propMat); leg.position.set(b.position.x, (top - 0.06) / 2, b.position.z + lz * ((pr.len || 1.1) / 2 - 0.08)); propGroup.add(leg); }
+        } else if (pr.type === 'bar') {
+          const r = pr.at ? fig.userData.R[pr.at].userData.r : 0;
+          const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.3, 14), metal); bar.rotation.z = Math.PI / 2; bar.position.set(0, py + (pr.dy != null ? pr.dy : r * 0.3), pz); propGroup.add(bar);
+          for (const sx of [-1, 1]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.07, py + 0.2, 0.07), propMatHi); post.position.set(sx * 0.68, (py + 0.2) / 2, pz); propGroup.add(post); }
+        } else if (pr.type === 'dumbbell' || pr.type === 'kettlebell') {
+          attachHeld(pr.type, pr.hand || 'both', fig); attachHeld(pr.type, pr.hand || 'both', mir);
+        } else if (pr.type === 'barbell' || pr.type === 'band') {
+          const m = pr.type === 'barbell'
+            ? (() => { const g = new THREE.Group(); const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.6, 12), metal); bar.rotation.z = Math.PI / 2; g.add(bar); for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 28), rubber); p.rotation.z = Math.PI / 2; p.position.x = sx * 0.62; g.add(p); } return g; })()
+            : new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1, 8), bandMat);
+          propGroup.add(m); spans.push({ m, type: pr.type });
         }
       }
     }
     function ctxFor(C, pose) { return { anchor: C.anchor || null, groundY: 0.012 }; }
+    function updateSpans() {
+      if (!spans.length) return;
+      const R0 = fig.userData.R; const a = wpos(R0.handL, tmpV()), b = wpos(R0.handR, tmpV());
+      for (const sp of spans) {
+        const mid = a.clone().add(b).multiplyScalar(0.5); sp.m.position.copy(mid);
+        const dir = b.clone().sub(a); const len = dir.length(); dir.normalize();
+        if (sp.type === 'band') { sp.m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir); sp.m.scale.set(1, Math.max(0.05, len), 1); }
+        else sp.m.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir);
+      }
+    }
+    // Measurement hook for automatic checks: pose + every contact marker (fig space) at time t.
+    function probe(t) {
+      time = t; const s = sample(C, time); applyPose(fig, s.pose, ctxFor(C, s.pose));
+      const out = {}; for (const m of fig.userData.R.markers) { const v = wpos(m, tmpV()); fig.worldToLocal(v); out[m.name] = [v.x, v.y, v.z, m.userData.r]; }
+      const Rr = fig.userData.R; const solved = { pit: Rr.tilt.rotation.x / D2R, kL: Rr.knL.rotation.x / D2R, kR: Rr.knR.rotation.x / D2R };
+      return { pose: s.pose, solved, cap: s.frame ? s.frame.c : '', kind: s.frame ? s.frame.k : '', wrong: !!(s.frame && s.frame.w), markers: out };
+    }
 
     let C = null, time = 0, playing = true, speed = 1, last = 0, raf = 0;
     let az = 50, el = 10, dist = 3.5, ty = 0.8, userAz = 0, userEl = 0;
@@ -1070,6 +1119,7 @@ td { color: var(--muted); }
       if (!C) return;
       const s = sample(C, time);
       applyPose(fig, s.pose, ctxFor(C, s.pose));
+      updateSpans();
       // mirror copy
       for (let i = 0; i < nodesA.length; i++) { nodesB[i].position.copy(nodesA[i].position); nodesB[i].quaternion.copy(nodesA[i].quaternion); }
       // shadow follows pelvis
@@ -1114,7 +1164,7 @@ td { color: var(--muted); }
     canvas.addEventListener('pointercancel', () => { drag = null; });
 
     return {
-      setDemo, resize, scene,
+      setDemo, resize, scene, probe,
       start() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); } },
       stop() { cancelAnimationFrame(raf); raf = 0; },
       play(v) { playing = v; }, isPlaying: () => playing,
@@ -1137,9 +1187,13 @@ td { color: var(--muted); }
 (function () {
   const HIPS = { s: -12, a: 28, e: 105 }; // hands on hips
   const GUARD = { s: 38, a: -4, e: 138 };
-  const QUAD = { m: 'F', pit: 90, h: 90, k: 90, f: 75, s: 90, a: 6, e: 0, sol: { a: 'handL', b: 'kneeR', p: 'pit', lo: 55, hi: 125 } };
+  const QUAD = { m: 'F', pit: 90, h: 90, k: 90, f: 88, s: 90, a: 6, e: 0, sol: { a: 'handL', b: ['kneeR', 'toeR', 'ankleR'], p: 'pit', lo: 55, hi: 125 } };
   const PRONE = { m: 'F', pit: 90, h: 0, k: 0, f: 78, nk: -6 };
-  const SUPINE_BENT = { m: 'F', pit: -90, h: 58, k: 105, flat: 1, s: 0, a: 14, e: 0 };
+  const SUPINE_BENT = { m: 'F', pit: -92.7, h: 40, k: 104, flat: 1, s: 0, a: 14, e: 0 };
+  // lying on the back, hips down: upper back + glutes + heels all on the floor
+  const BR_DOWN = [{ a: 'upperBack', b: 'glute', p: 'pit', lo: -115, hi: -65 }, { a: 'heelL', b: 'glute', p: 'k', lo: 40, hi: 160 }];
+  const BR_DOWN1 = [{ a: 'upperBack', b: 'glute', p: 'pit', lo: -115, hi: -65 }, { a: 'heelL', b: 'glute', p: 'kL', lo: 40, hi: 160 }];
+  const BR_UP = { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 };
   const PSOL = { a: 'handL', b: ['kneeR', 'toeL'], p: 'pit', lo: 10, hi: 120 };
   const PLANK = (k) => ({ m: 'F', pit: 80, k: k, f: 8, s: 90, a: 10, e: 0, sol: PSOL });
 
@@ -1249,7 +1303,7 @@ td { color: var(--muted); }
   D.backWidow = {
     cam: [70, 16, 3.1, 0.3], anchor: 'heelL',
     f: [
-      Object.assign({}, SUPINE_BENT, { s: -8, a: 40, e: 90, sol: { a: 'elbowL', b: 'glute', p: 'pit', lo: -95, hi: -55 }, hh: 0.8, c: 'ON YOUR BACK · ELBOWS BENT BY SIDES' }),
+      Object.assign({}, SUPINE_BENT, { s: -8, a: 40, e: 90, sol: [{ a: 'elbowL', b: 'glute', p: 'pit', lo: -115, hi: -55 }, { a: 'heelL', b: 'glute', p: 'h', lo: 5, hi: 85 }], hh: 0.8, c: 'ON YOUR BACK · ELBOWS BENT BY SIDES' }),
       { d: 1.3, s: -38, sp: -8, c: 'DRIVE ELBOWS DOWN · CHEST LIFTS' },
       { hh: 1.4, c: 'SQUEEZE BETWEEN SHOULDER BLADES' },
       { d: 1.5, s: -8, sp: 0, c: 'LOWER SLOW', hh: 0.4 },
@@ -1285,7 +1339,7 @@ td { color: var(--muted); }
     cam: [82, 6, 3.6, 0.55], anchor: 'handL', anchorY: 0.71, anchorAt: [0.17, 0],
     props: [{ type: 'table', at: 'handL', dz: 0.03 }],
     f: [
-      { m: 'F', pit: -60, h: 62, k: 92, flat: 1, s: 92, a: 10, e: 0, sol: { a: 'heelL', b: 'handL', v: -0.71, p: 'pit', lo: -89, hi: -10 }, hh: 1, c: 'STURDY TABLE ONLY · TEST IT FIRST' },
+      { m: 'F', pit: -60, h: 4, k: 88, flat: 1, s: 92, a: 10, e: 0, sol: { a: 'heelL', b: 'handL', v: -0.68, p: 'pit', lo: -150, hi: -10 }, hh: 1, c: 'STURDY TABLE ONLY · TEST IT FIRST' },
       { d: 2, s: 30, e: 105, a: 28, c: 'PULL CHEST TO EDGE · 2 SEC' },
       { hh: 0.5, c: 'BODY STRAIGHT KNEES → HEAD' },
       { d: 2, s: 92, e: 0, a: 10, c: 'LOWER · 2 SEC', hh: 0.4 },
@@ -1404,37 +1458,37 @@ td { color: var(--muted); }
   D.gluteBridge = {
     cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
     f: [
-      Object.assign({}, SUPINE_BENT, { sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 }, hh: 0.8, c: 'FEET FLAT · KNEES BENT' }),
-      { d: 1.2, h: 4, k: 88, c: 'SQUEEZE GLUTES · HIPS UP' },
+      Object.assign({}, SUPINE_BENT, { sol: BR_DOWN, hh: 0.8, c: 'FEET FLAT · KNEES BENT' }),
+      { d: 1.2, h: 4, k: 88, sol: BR_UP, c: 'SQUEEZE GLUTES · HIPS UP' },
       { hh: 1, c: 'HOLD 2 SEC · RIBS DOWN' },
-      { d: 1.5, h: 58, k: 105, c: 'LOWER SLOW' },
-      { d: 1.2, h: -14, k: 82, sp: -24, w: 1, c: '✗ OVER-ARCHING — LOW BACK TAKES OVER' },
-      { d: 1.2, h: 58, k: 105, sp: 0, c: 'FEEL: GLUTES + HAMSTRINGS, NOT LOW BACK' },
+      { d: 1.5, h: 40, k: 104, sol: BR_DOWN, c: 'LOWER SLOW' },
+      { d: 1.2, h: -14, k: 82, sp: -24, sol: BR_UP, w: 1, c: '✗ OVER-ARCHING — LOW BACK TAKES OVER' },
+      { d: 1.2, h: 40, k: 104, sp: 0, sol: BR_DOWN, c: 'FEEL: GLUTES + HAMSTRINGS, NOT LOW BACK' },
     ],
   };
   D.kickstandBridge = {
     cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
     f: [
-      Object.assign({}, SUPINE_BENT, { hR: 6, kR: 12, sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 }, hh: 0.8, c: 'WORKING FOOT FLAT · HELPER HEEL OUT' }),
-      { d: 1.2, hL: 4, kL: 88, hR: -28, kR: 6, c: 'DRIVE THROUGH THE WORKING HEEL' },
+      Object.assign({}, SUPINE_BENT, { hR: 6, kR: 12, sol: BR_DOWN1, hh: 0.8, c: 'WORKING FOOT FLAT · HELPER HEEL OUT' }),
+      { d: 1.2, hL: 4, kL: 88, hR: -28, kR: 6, sol: BR_UP, c: 'DRIVE THROUGH THE WORKING HEEL' },
       { hh: 1.2, c: 'HOLD 2 SEC · HIPS LEVEL' },
-      { d: 1.6, hL: 58, kL: 105, hR: 6, kR: 12, c: 'LOWER SLOW · HELPER FOOT JUST BALANCES' },
+      { d: 1.6, hL: 40, kL: 104, hR: 6, kR: 12, sol: BR_DOWN1, c: 'LOWER SLOW · HELPER FOOT JUST BALANCES' },
     ],
   };
   D.singleLegBridge = {
     cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
     f: [
-      Object.assign({}, SUPINE_BENT, { hR: 40, kR: 4, sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 }, hh: 0.8, c: 'ONE FOOT DOWN · OTHER LEG LONG' }),
-      { d: 1.2, hL: 4, kL: 88, hR: 4, kR: 2, c: 'HIPS UP · LEG IN LINE WITH THIGH' },
+      Object.assign({}, SUPINE_BENT, { hR: 40, kR: 4, sol: BR_DOWN1, hh: 0.8, c: 'ONE FOOT DOWN · OTHER LEG LONG' }),
+      { d: 1.2, hL: 4, kL: 88, hR: 4, kR: 2, sol: BR_UP, c: 'HIPS UP · LEG IN LINE WITH THIGH' },
       { hh: 1.4, c: 'HOLD 2 SEC · NO ARCH' },
-      { d: 2, hL: 58, kL: 105, hR: 40, kR: 4, c: 'LOWER SLOW' },
-      { d: 1.2, hL: 4, kL: 88, hR: -14, kR: 2, sp: -18, w: 1, c: '✗ HIPS TWIST + LOW BACK ARCHES' },
-      { d: 1.2, hL: 58, kL: 105, hR: 40, kR: 4, sp: 0, c: 'KEEP BOTH HIPS LEVEL' },
+      { d: 2, hL: 40, kL: 104, hR: 40, kR: 4, sol: BR_DOWN1, c: 'LOWER SLOW' },
+      { d: 1.2, hL: 4, kL: 88, hR: -14, kR: 2, sp: -18, sol: BR_UP, w: 1, c: '✗ HIPS TWIST + LOW BACK ARCHES' },
+      { d: 1.2, hL: 40, kL: 104, hR: 40, kR: 4, sp: 0, sol: BR_DOWN1, c: 'KEEP BOTH HIPS LEVEL' },
     ],
   };
   // Rib-safe (no lying face down): all-fours versions
-  const QSOL_L = { a: 'handL', b: 'kneeR', p: 'pit', lo: 55, hi: 125 };
-  const QSOL_R = { a: 'handR', b: 'kneeL', p: 'pit', lo: 55, hi: 125 };
+  const QSOL_L = { a: 'handL', b: ['kneeR', 'toeR', 'ankleR'], p: 'pit', lo: 55, hi: 125 };
+  const QSOL_R = { a: 'handR', b: ['kneeL', 'toeL', 'ankleL'], p: 'pit', lo: 55, hi: 125 };
   D.quadYT = {
     cam: [30, 22, 3.3, 0.45],
     f: [
@@ -1481,17 +1535,65 @@ td { color: var(--muted); }
       { d: 1.2, spT: 0, aR: 70, c: '5–8 SLOW REPS · THEN SWITCH' },
     ],
   };
+  // ---- Equipment examples (templates for gym / home-equipment plans) ----
+  const GOB = { s: 4, a: -18, e: 112 }; // weight held at the chest (hands at the breastbone)
+  D.gobletSquat = {
+    cam: [38, 8, 3.5, 0.8], props: [{ type: 'kettlebell', hand: 'both' }],
+    f: [
+      Object.assign({ x: 0.21, o: 20, h: 1, c: 'WEIGHT AT CHEST · ELBOWS DOWN' }, GOB),
+      { d: 2.5, py: 0.55, pz: -0.11, pit: 22, nk: -8, c: 'SIT BETWEEN YOUR HEELS · 2–3 SEC' },
+      { h: 1, c: 'ELBOWS INSIDE KNEES · CHEST TALL' },
+      { d: 1.1, py: 0.955, pz: 0, pit: 0, nk: 0, c: 'DRIVE THROUGH WHOLE FOOT', h: 0.6 },
+    ],
+  };
+  D.dbRow = {
+    cam: [80, 10, 3.5, 0.75], props: [{ type: 'dumbbell', hand: 'R' }, { type: 'bench', at: 'handL', len: 1.1, dzc: 0.3 }],
+    f: [
+      { zL: 0.32, zR: -0.3, xL: 0.13, xR: -0.13, o: 6, py: 0.86, pz: 0, pit: 62, sL: 72, aL: 6, eL: 0, sR: 70, aR: 6, eR: 5, h: 1, c: 'HAND ON BENCH · FLAT BACK' },
+      { d: 1.2, sR: 18, aR: 10, eR: 95, c: 'ELBOW TO YOUR BACK POCKET' },
+      { h: 1, c: 'SQUEEZE · NO TWISTING' },
+      { d: 2, sR: 70, aR: 6, eR: 5, c: 'LOWER SLOW · 2 SEC', h: 0.5 },
+    ],
+  };
+  D.floorPress = {
+    cam: [65, 22, 3.0, 0.35], props: [{ type: 'dumbbell', hand: 'both' }],
+    f: [
+      Object.assign({}, SUPINE_BENT, { s: 90, a: 12, e: 0, sol: BR_DOWN, hh: 1, c: 'ON YOUR BACK · WEIGHTS OVER CHEST' }),
+      { d: 2, s: -2, a: 48, e: 88, c: 'LOWER UNTIL ELBOWS TOUCH THE FLOOR' },
+      { hh: 0.6, c: 'PAUSE · WRISTS STACKED OVER ELBOWS' },
+      { d: 1, s: 90, a: 12, e: 0, c: 'PRESS UP', hh: 0.6 },
+    ],
+  };
+  D.pullUp = {
+    cam: [70, 4, 4.4, 1.5], anchor: 'handL', anchorY: 2.32, anchorAt: [0.24, 0], props: [{ type: 'bar', at: 'handL', dy: 0.02 }],
+    f: [
+      { m: 'F', pit: 0, s: 178, a: 22, e: 0, h: 8, k: 20, f: 20, hh: 1, c: 'HANG · HANDS JUST WIDER THAN SHOULDERS' },
+      { d: 0.6, s: 170, c: 'SHOULDER BLADES DOWN FIRST' },
+      { d: 1.4, s: 60, a: 30, e: 120, c: 'PULL CHEST TO THE BAR' },
+      { hh: 0.5, c: 'CHIN OVER THE BAR' },
+      { d: 2, s: 178, a: 22, e: 0, c: 'LOWER SLOW · FULL HANG', hh: 0.6 },
+    ],
+  };
+  D.bandPullApart = {
+    cam: [20, 8, 3.3, 1.1], props: [{ type: 'band' }],
+    f: [
+      { x: 0.14, o: 6, s: 88, a: 6, e: 4, h: 1, c: 'ARMS STRAIGHT · BAND AT CHEST HEIGHT' },
+      { d: 1.2, a: 85, c: 'PULL APART · SQUEEZE SHOULDER BLADES' },
+      { h: 1, c: 'HOLD 1–2 SEC · NO SHRUG' },
+      { d: 1.6, a: 6, c: 'RETURN SLOW', h: 0.4 },
+    ],
+  };
   D.bridgeHold = {
     cam: [74, 14, 3.1, 0.3], anchor: 'heelL',
     f: [
-      Object.assign({}, SUPINE_BENT, { sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 }, hh: 0.6, c: 'FEET FLAT · KNEES BENT' }),
-      { d: 1.2, h: 4, k: 88, c: 'HIPS UP · GLUTES TIGHT' },
+      Object.assign({}, SUPINE_BENT, { sol: BR_DOWN, hh: 0.6, c: 'FEET FLAT · KNEES BENT' }),
+      { d: 1.2, h: 4, k: 88, sol: BR_UP, c: 'HIPS UP · GLUTES TIGHT' },
       { hh: 3.5, c: 'HOLD 30 SEC AT THE TOP' },
-      { d: 1.5, h: 58, k: 105, c: 'LOWER SLOW · REST' },
+      { d: 1.5, h: 40, k: 104, sol: BR_DOWN, c: 'LOWER SLOW · REST' },
     ],
   };
   const bdSide = (arm, leg, stA, stK) => {
-    const o = { sol: { a: 'hand' + stA, b: 'knee' + stK, p: 'pit', lo: 55, hi: 125 } };
+    const o = { sol: { a: 'hand' + stA, b: ['knee' + stK, 'toe' + stK, 'ankle' + stK], p: 'pit', lo: 55, hi: 125 } };
     o['s' + arm] = 178; o['h' + leg] = 0; o['k' + leg] = 0; o['f' + leg] = 30;
     return o;
   };
@@ -1527,10 +1629,10 @@ td { color: var(--muted); }
   const sidePlank = (knees) => ({
     cam: [-88, 12, 3.2, 0.32],
     f: [
-      Object.assign(SIDE(knees), { spS: -22, hh: 0.8, c: 'ELBOW UNDER SHOULDER · HIPS DOWN' }),
-      { d: 1, spS: 0, c: 'LIFT HIPS · STRAIGHT LINE' },
+      Object.assign(SIDE(knees), { spS: -22, sol: [SIDE(knees).sol, { a: 'pelvisM', b: 'elbowL', p: 'spS', lo: -60, hi: 10 }], hh: 0.8, c: 'ELBOW UNDER SHOULDER · HIPS DOWN' }),
+      { d: 1, spS: 0, sol: SIDE(knees).sol, c: 'LIFT HIPS · STRAIGHT LINE' },
       { hh: 1, c: 'HOLD 7–10 SEC · DON\'T ROLL' },
-      { d: 1, spS: -22, c: 'LOWER · SHORT PERFECT HOLDS' },
+      { d: 1, spS: -22, sol: [SIDE(knees).sol, { a: 'pelvisM', b: 'elbowL', p: 'spS', lo: -60, hi: 10 }], c: 'LOWER · SHORT PERFECT HOLDS' },
     ],
   });
   D.sidePlankKnees = sidePlank(true);
@@ -1647,7 +1749,7 @@ td { color: var(--muted); }
   D.hipFlexor = {
     cam: [84, 8, 3.4, 0.55],
     f: [
-      Object.assign({ py: 0.53, pz: -0.05, zL: 0.38, zR: -0.5, xL: 0.12, xR: -0.12, fR: 85, yR: -0.15 }, HIPS, { h: 0.8, c: 'HALF-KNEEL · BACK KNEE DOWN' }),
+      Object.assign({ py: 0.55, pz: -0.05, zL: 0.38, zR: -0.5, xL: 0.12, xR: -0.12, fR: 172, yR: 0 }, HIPS, { h: 0.8, c: 'HALF-KNEEL · BACK KNEE DOWN' }),
       { d: 1.4, pit: -8, c: 'TUCK PELVIS · SQUEEZE BACK GLUTE' },
       { d: 1.4, pz: 0.04, c: 'SHIFT FORWARD A LITTLE' },
       { h: 2.2, c: 'HOLD 60 SEC · FEEL FRONT OF BACK HIP' },
@@ -1666,7 +1768,7 @@ td { color: var(--muted); }
   D.ankleRocks = {
     cam: [84, 8, 3.4, 0.6],
     f: [
-      Object.assign({ py: 0.53, pz: -0.05, zL: 0.38, zR: -0.5, xL: 0.12, xR: -0.12, fR: 85, yR: -0.15 }, HIPS, { h: 0.6, c: 'HALF-KNEEL · FRONT FOOT FLAT' }),
+      Object.assign({ py: 0.55, pz: -0.05, zL: 0.38, zR: -0.5, xL: 0.12, xR: -0.12, fR: 172, yR: 0 }, HIPS, { h: 0.6, c: 'HALF-KNEEL · FRONT FOOT FLAT' }),
       { d: 1.2, pz: 0.12, c: 'KNEE FORWARD OVER TOES' },
       { h: 0.6, c: 'HEEL STAYS DOWN' },
       { d: 1, pz: -0.05 },
@@ -1677,14 +1779,14 @@ td { color: var(--muted); }
   D.bridgeClam = {
     cam: [56, 22, 3.1, 0.3], anchor: 'heelL',
     f: [
-      Object.assign({}, SUPINE_BENT, { sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 }, hh: 0.4, c: 'BRIDGE · SQUEEZE GLUTES' }),
-      { d: 1, h: 6, k: 88 },
-      { d: 1, h: 58, k: 105 },
+      Object.assign({}, SUPINE_BENT, { sol: BR_DOWN, hh: 0.4, c: 'BRIDGE · SQUEEZE GLUTES' }),
+      { d: 1, h: 6, k: 88, sol: BR_UP },
+      { d: 1, h: 40, k: 104, sol: BR_DOWN },
       { d: 1.6, pit: -90, spin: 90, h: 45, k: 95, sol: null, flat: 0, f: 20, sL: 175, aL: 10, eL: 30, c: 'ROLL TO YOUR SIDE' },
       { d: 1, rR: 38, c: 'CLAMSHELL · KNEES OPEN, FEET TOGETHER' },
       { d: 1, rR: 0, c: 'HIPS STAY STACKED' },
       { d: 1, rR: 38 }, { d: 1, rR: 0, hh: 0.4 },
-      { d: 1.4, spin: 0, h: 58, k: 105, flat: 1, f: 0, sL: 0, aL: 14, eL: 0, sol: { a: 'upperBack', b: 'heelL', p: 'pit', lo: -150, hi: -80 } },
+      { d: 1.4, spin: 0, h: 40, k: 104, flat: 1, f: 0, sL: 0, aL: 14, eL: 0, sol: BR_DOWN },
     ],
   };
   D.hamStretch = {
@@ -1758,6 +1860,9 @@ td { color: var(--muted); }
     ],
   };
 
+  for (const k of ['gluteBridge', 'bridgeHold', 'kickstandBridge', 'singleLegBridge', 'bridgeClam']) for (const fr of D[k].f) {
+    if (fr.sol === BR_UP) fr.nk = 20; else if (fr.sol === BR_DOWN || fr.sol === BR_DOWN1) fr.nk = 0;
+  }
   window.DEMOS = D;
 })();
 
@@ -1830,6 +1935,11 @@ td { color: var(--muted); }
     quadYT: { setup: ['ON ALL FOURS · HANDS UNDER SHOULDERS', 'KNEES UNDER HIPS · BACK FLAT'], feel: 'FEEL: BETWEEN SPINE + SHOULDER BLADE' },
     quadYHold: { setup: ['ON ALL FOURS · BACK FLAT', 'BRACE ABS · HIPS LEVEL'], feel: 'FEEL: UPPER BACK + BACK OF SHOULDER' },
     quadThoracic: { setup: ['ON ALL FOURS · ONE HAND BEHIND HEAD', 'SIT HIPS SLIGHTLY BACK'], feel: 'FEEL: UPPER BACK OPENING, NOT LOW BACK' },
+    gobletSquat: { setup: ['FEET SHOULDER-WIDTH · TOES OUT', 'HOLD THE WEIGHT AT YOUR CHEST'], feel: 'FEEL: THIGHS + GLUTES · UPPER BACK TALL' },
+    dbRow: { setup: ['ONE HAND ON THE BENCH', 'STAGGER FEET · FLAT BACK'], feel: 'FEEL: LAT + MID BACK' },
+    floorPress: { setup: ['ON YOUR BACK · KNEES BENT', 'WEIGHTS OVER YOUR CHEST'], feel: 'FEEL: CHEST + TRICEPS' },
+    pullUp: { setup: ['GRIP JUST WIDER THAN SHOULDERS', 'HANG · RIBS DOWN · LEGS QUIET'], feel: 'FEEL: LATS + UPPER BACK' },
+    bandPullApart: { setup: ['FEET HIP-WIDTH · STAND TALL', 'BAND IN BOTH HANDS AT CHEST HEIGHT'], feel: 'FEEL: BETWEEN THE SHOULDER BLADES' },
     // reaction + footwork
     pointStep: { setup: ['FEET WIDE · KNEES SOFT', 'WEIGHT ON THE BALLS OF FEET'], feel: 'FEEL: LIGHT + READY TO MOVE' },
     numberSteps: { setup: ['FEET WIDE · KNEES SOFT', 'HANDS UP · EYES FORWARD'], feel: 'FEEL: QUICK FIRST STEP' },

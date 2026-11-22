@@ -15,7 +15,7 @@ You are running in Claude Code. Build me a complete, evidence-based training pla
 - **Step 6 (visuals):**
   - Write a demo in `demos.js` and SETUP/FEEL notes in `demo-notes.js` for every exercise in my plan.
   - Add props to `demo-engine.js` for my equipment, e.g. dumbbells in the hands, a bench, a pull-up bar.
-  - Render stills from front and side and check accuracy before moving on.
+  - Follow the README section **"Get every demo right the first time"**: start each demo from the closest verified pose and use the contact solvers. Then run `node clip-render/check.js` and fix every FAIL. Look at the front and side contact sheets yourself. Only render videos after every demo passes.
   - Then render MP4 clips with `clip-render/` (install Playwright, Chromium, ffmpeg and three@0.128.0 as the README says) and build the gallery page.
   - If something can't run in this environment, say exactly what and why.
 - Commit my project to git as you go if I have a repo. Never commit secrets.

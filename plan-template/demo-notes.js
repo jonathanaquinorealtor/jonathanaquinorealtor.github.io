@@ -65,6 +65,11 @@
     quadYT: { setup: ['ON ALL FOURS · HANDS UNDER SHOULDERS', 'KNEES UNDER HIPS · BACK FLAT'], feel: 'FEEL: BETWEEN SPINE + SHOULDER BLADE' },
     quadYHold: { setup: ['ON ALL FOURS · BACK FLAT', 'BRACE ABS · HIPS LEVEL'], feel: 'FEEL: UPPER BACK + BACK OF SHOULDER' },
     quadThoracic: { setup: ['ON ALL FOURS · ONE HAND BEHIND HEAD', 'SIT HIPS SLIGHTLY BACK'], feel: 'FEEL: UPPER BACK OPENING, NOT LOW BACK' },
+    gobletSquat: { setup: ['FEET SHOULDER-WIDTH · TOES OUT', 'HOLD THE WEIGHT AT YOUR CHEST'], feel: 'FEEL: THIGHS + GLUTES · UPPER BACK TALL' },
+    dbRow: { setup: ['ONE HAND ON THE BENCH', 'STAGGER FEET · FLAT BACK'], feel: 'FEEL: LAT + MID BACK' },
+    floorPress: { setup: ['ON YOUR BACK · KNEES BENT', 'WEIGHTS OVER YOUR CHEST'], feel: 'FEEL: CHEST + TRICEPS' },
+    pullUp: { setup: ['GRIP JUST WIDER THAN SHOULDERS', 'HANG · RIBS DOWN · LEGS QUIET'], feel: 'FEEL: LATS + UPPER BACK' },
+    bandPullApart: { setup: ['FEET HIP-WIDTH · STAND TALL', 'BAND IN BOTH HANDS AT CHEST HEIGHT'], feel: 'FEEL: BETWEEN THE SHOULDER BLADES' },
     // reaction + footwork
     pointStep: { setup: ['FEET WIDE · KNEES SOFT', 'WEIGHT ON THE BALLS OF FEET'], feel: 'FEEL: LIGHT + READY TO MOVE' },
     numberSteps: { setup: ['FEET WIDE · KNEES SOFT', 'HANDS UP · EYES FORWARD'], feel: 'FEEL: QUICK FIRST STEP' },
