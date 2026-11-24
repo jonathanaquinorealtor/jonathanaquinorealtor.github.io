@@ -78,9 +78,14 @@
   const noProne = () => !!(profile() && profile().noProne);
   const userSwaps = () => (profile() && profile().swaps) || {};
   const swapEx = (ex) => {
-    let e = ex, guard = 0;
-    while (guard++ < 4) { const s = userSwaps()[e.id]; if (s && P.EX[s.to]) e = P.EX[s.to]; else break; }
-    return noProne() && P.PRONE_SWAP[e.id] ? P.EX[P.PRONE_SWAP[e.id]] : e;
+    let e = ex;
+    for (let guard = 0; guard < 6; guard++) {
+      const s = userSwaps()[e.id];
+      if (s && P.EX[s.to]) { e = P.EX[s.to]; continue; }
+      if (noProne() && P.PRONE_SWAP[e.id]) { e = P.EX[P.PRONE_SWAP[e.id]]; continue; }
+      break;
+    }
+    return e;
   };
   // The day's exercises in order, with rib-safe swaps applied and duplicates removed.
   function dayList(day) {
@@ -363,6 +368,7 @@
     h += '<label class="formchk"><input id="f-' + ex.id + '" type="checkbox" data-form ' + (d.form !== false ? 'checked' : '') + '> Form stayed clean (neutral spine every rep)</label>';
     h += '<label class="notes"><span>Notes (how it felt)</span><textarea id="n-' + ex.id + '" rows="2" data-note placeholder="Burn, shaky, balance, anything…">' + esc(d.note || '') + '</textarea></label>';
     h += '<label class="formchk"><input id="x-' + ex.id + '" type="checkbox" data-skip ' + (d.skipped ? 'checked' : '') + '> Couldn’t do it today (logs it as not done — not a fail)</label>';
+    h += '<p class="fine">Anything you enter here is saved — numbers, a rating, the pain slider, or just a note.</p>';
     if (ex.ladder) h += '<p class="fine">Set 1 at RPE 9–10, or 2+ reps short? Drop one step for sets 2–3 instead of grinding.</p>';
     h += '</div></article>';
     return h;
@@ -491,15 +497,20 @@
     const day = selDay || suggestDay();
     const DY = P.DAYS[day];
     const entries = [];
-    const flat = dayList(day).map((x) => (x.flow ? { flow: true } : { ex: x.ex.id }));
+    const flat = dayList(day).map((x) => (x.flow ? { flow: true } : { ex: x.ex.id, swapped: !!x.swapped }));
     for (const it of flat) {
       if (it.flow) { const d = D('flow'); if (d.done || d.rating) entries.push({ ex: 'flow', kind: 'mobility', rating: d.rating || null, pain: d.pain || 0 }); continue; }
       const ex = it.lad ? curEx(it.lad) : P.EX[it.ex];
       const d = D(ex.id);
       const sets = (d.sets || []).map((v) => (v === '' || v == null ? null : Number(v))).filter((v) => v != null && !isNaN(v));
       if (d.skipped) { entries.push({ ex: ex.id, ladder: ex.ladder || null, step: ex.ladder ? ex.step : null, unit: ex.unit, sets: [], target: ex.reps, completed: false, note: d.note || '', pain: d.pain == null ? 0 : d.pain }); continue; }
-      if (!sets.length) continue;
-      entries.push({ ex: ex.id, ladder: ex.ladder || null, step: ex.ladder ? ex.step : null, unit: ex.unit, sets, target: ex.reps, rating: d.rating || 'right', pain: d.pain == null ? 0 : d.pain, form: d.form !== false, note: d.note || '', completed: true });
+      const lad = it.swapped ? null : (ex.ladder || null); // a swapped-in move never moves the original ladder
+      if (!sets.length) {
+        // no numbers, but a note / rating / pain was entered: save it anyway
+        if ((d.note && d.note.trim()) || d.rating || d.pain != null) entries.push({ ex: ex.id, ladder: lad, step: lad ? ex.step : null, unit: ex.unit, sets: [], target: ex.reps, rating: d.rating || null, pain: d.pain == null ? 0 : d.pain, form: d.form !== false, note: d.note || '', completed: true, noNumbers: true });
+        continue;
+      }
+      entries.push({ ex: ex.id, ladder: lad, step: lad ? ex.step : null, unit: ex.unit, sets, target: ex.reps, rating: d.rating || 'right', pain: d.pain == null ? 0 : d.pain, form: d.form !== false, note: d.note || '', completed: true });
     }
     if (!entries.length) { toast('Log at least one set first.'); return; }
     const msgs = [];
@@ -508,6 +519,7 @@
     // evaluate before saving (so "previous" = earlier sessions)
     const ladderUpdates = {};
     for (const e of entries) {
+      if (e.noNumbers) { const n0 = P.EX[e.ex] ? P.EX[e.ex].name : 'That move'; msgs.push(n0 + ': saved your ' + (e.note ? 'note' : 'rating') + ' (no set numbers, so the level stays the same).' + ((e.pain || 0) >= 6 ? ' Pain ' + e.pain + '/10 is RED.' : (e.pain || 0) >= 4 ? ' Pain ' + e.pain + '/10 is AMBER: hold.' : '')); continue; }
       if (e.completed === false) { msgs.push((P.EX[e.ex] ? P.EX[e.ex].name : 'That move') + ': not done today — no change to your level. Same plan next time.' + (/sick|nause|dizz|light/i.test(e.note || '') ? ' Feeling sick is a stop signal, not a fail: eat a light snack 1–2 h before training, sip water, and stop if it comes back.' : '')); continue; }
       if (!e.ladder) {
         if (e.pain >= 6) { const ex0 = P.EX[e.ex]; msgs.push((ex0 ? ex0.name : 'That move') + ': pain ' + e.pain + '/10 is RED.' + (ex0 && ex0.kind === 'tendon' ? ' Tendon work must stay ≤3/10 and be back to baseline by the next morning.' : '') + ' Leg weakness, numbness or pain down the leg: stop and get checked.'); }
@@ -624,7 +636,7 @@
     for (const l of ls) {
       h += '<article class="card logrow"><div class="lr-head"><b>' + esc(l.title || 'Workout') + '</b><span>' + fmtDate(l.date) + (l.time ? ' · ' + esc(l.time) : '') + '</span></div>';
       if (l.seeded) h += '<p class="fine">' + esc(l.note || 'Recovered from your earlier plan.') + '</p>';
-      if (l.entries && l.entries.length) h += '<ul class="entries">' + l.entries.map((e) => { const ex = P.EX[e.ex]; return '<li><span>' + esc(ex ? ex.name : e.ex === 'flow' ? 'Mobility Flow' : e.ex) + (e.ladder ? ' <small>step ' + SN(e.step) + '</small>' : '') + '</span><span class="nums">' + (e.completed === false ? '<b class="pv a">Not done</b>' : (e.sets ? e.sets.join(' · ') + (e.setsNote ? ' ' + esc(e.setsNote) : '') : '') + ' <i class="r-' + (e.rating || '') + '">' + ({ easy: 'too easy', right: 'just right', hard: 'too hard' }[e.rating] || '') + '</i>' + (e.difficulty != null ? ' <i>difficulty ' + e.difficulty + ' · effectiveness ' + e.effectiveness + '</i>' : '') + ' <b class="pv ' + painClass(e.pain || 0) + '">pain ' + (e.pain || 0) + '/10</b>') + '</span>' + (e.note ? '<q>' + esc(e.note) + '</q>' : '') + '</li>'; }).join('') + '</ul>';
+      if (l.entries && l.entries.length) h += '<ul class="entries">' + l.entries.map((e) => { const ex = P.EX[e.ex]; return '<li><span>' + esc(ex ? ex.name : e.ex === 'flow' ? 'Mobility Flow' : e.ex) + (e.ladder ? ' <small>step ' + SN(e.step) + '</small>' : '') + '</span><span class="nums">' + (e.completed === false ? '<b class="pv a">Not done</b>' : e.noNumbers ? '<i>done, no numbers</i> <b class="pv ' + painClass(e.pain || 0) + '">pain ' + (e.pain || 0) + '/10</b>' : (e.sets ? e.sets.join(' · ') + (e.setsNote ? ' ' + esc(e.setsNote) : '') : '') + ' <i class="r-' + (e.rating || '') + '">' + ({ easy: 'too easy', right: 'just right', hard: 'too hard' }[e.rating] || '') + '</i>' + (e.difficulty != null ? ' <i>difficulty ' + e.difficulty + ' · effectiveness ' + e.effectiveness + '</i>' : '') + ' <b class="pv ' + painClass(e.pain || 0) + '">pain ' + (e.pain || 0) + '/10</b>') + '</span>' + (e.note ? '<q>' + esc(e.note) + '</q>' : '') + '</li>'; }).join('') + '</ul>';
       const ck = S.data.checks[l.id];
       if (ck) h += '<p class="fine">Next morning: ' + esc(ck.feel) + ', ' + ck.pain + '/10 (' + esc(ck.level) + ')</p>';
       h += '</article>';

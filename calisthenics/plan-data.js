@@ -181,7 +181,7 @@
   EX.core3e = { id: 'core3e', name: 'Side Plank — Short Holds (knees, elbow padded)', demo: 'sidePlankKnees', sets: 3, reps: [3, 5], unit: 'holds/side', perLabel: '3–5 sec each', tempo: 'Hold 3–5 sec', rest: REST.core, kind: 'big3',
     cues: ['Folded towel under the elbow', 'Elbow right under the shoulder — not out in front', 'Short 3–5 sec holds; build to 7–10 sec'], feel: 'Side of the trunk. Some shoulder burn is normal; elbow pain is not.', wrong: 'Elbow out in front of the shoulder, hips sagging.', unlock: 'Back to the regular knee side plank once 5 holds/side of 5 sec feel “just right”, 2 sessions in a row' };
   EX.subBug.kind = 'big3'; EX.subBug.sets = 3; EX.subBug.reps = [6, 8]; EX.subBug.unit = 'reps/side'; EX.subBug.tempo = 'Slow reach · 2 sec pause';
-  const ALT = { core1: 'subBug', core2: 'subBug', core3: 'core3e', core3e: 'subBug', qYT: 'subDoor', qYH: 'subDoor', tCalf: 'tSplit', tHalf: 'tSplit', tSplit: 'tBridge', pull0: 'subDoor', legs0: 'tBridge' };
+  const ALT = { core1: 'subBug', core2: 'subBug', core3: 'core3e', core3e: 'subBug', qYT: 'pull1', qYH: 'pull1', subDoor: 'pull1', tCalf: 'tSplit', tHalf: 'tSplit', tSplit: 'tBridge', pull0: 'pull1', legs0: 'tBridge' };
   // Breathing, by kind of move
   const BREATH = {
     reps: 'Breathe in on the way down, out as you push or stand up. Never hold your breath.',
@@ -191,7 +191,7 @@
     mobility: 'Slow breaths. Breathe out as you ease into the stretch.',
   };
   const breathFor = (ex) => ex.kind === 'mobility' ? BREATH.mobility : ex.kind === 'big3' ? BREATH.big3 : ex.ladder === 'power' ? BREATH.power : /sec|holds/.test(ex.unit || '') || /Hold/.test(ex.name) ? BREATH.hold : BREATH.reps;
-  const PRONE_SWAP = { pull0: 'qYT', pull2: 'subDoor', pull4: 'subDoor', pull5: 'subDoor', pull6: 'subDoor', tY: 'qYH', m7: 'qTR' };
+  const PRONE_SWAP = { pull0: 'qYT', pull2: 'pull1', pull4: 'pull1', pull5: 'pull1', pull6: 'pull1', tY: 'qYH', m7: 'qTR' };
 
   const DAYS = {
     // Power first (fresh), then main ladders, Big 3 block, tendon block last.
