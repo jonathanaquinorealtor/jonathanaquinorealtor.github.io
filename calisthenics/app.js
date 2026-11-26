@@ -503,8 +503,8 @@
       const ex = it.lad ? curEx(it.lad) : P.EX[it.ex];
       const d = D(ex.id);
       const sets = (d.sets || []).map((v) => (v === '' || v == null ? null : Number(v))).filter((v) => v != null && !isNaN(v));
-      if (d.skipped) { entries.push({ ex: ex.id, ladder: ex.ladder || null, step: ex.ladder ? ex.step : null, unit: ex.unit, sets: [], target: ex.reps, completed: false, note: d.note || '', pain: d.pain == null ? 0 : d.pain }); continue; }
-      const lad = it.swapped ? null : (ex.ladder || null); // a swapped-in move never moves the original ladder
+      const lad = it.swapped || (ex.ladder && curEx(ex.ladder).id !== ex.id) ? null : (ex.ladder || null); // swapped-in or fixed (off-step) moves never move a ladder
+      if (d.skipped) { entries.push({ ex: ex.id, ladder: lad, step: lad ? ex.step : null, unit: ex.unit, sets: [], target: ex.reps, completed: false, note: d.note || '', pain: d.pain == null ? 0 : d.pain }); continue; }
       if (!sets.length) {
         // no numbers, but a note / rating / pain was entered: save it anyway
         if ((d.note && d.note.trim()) || d.rating || d.pain != null) entries.push({ ex: ex.id, ladder: lad, step: lad ? ex.step : null, unit: ex.unit, sets: [], target: ex.reps, rating: d.rating || null, pain: d.pain == null ? 0 : d.pain, form: d.form !== false, note: d.note || '', completed: true, noNumbers: true });

@@ -2150,10 +2150,12 @@ td { color: var(--muted); }
   const PRONE_SWAP = { pull0: 'qYT', pull2: 'pull1', pull4: 'pull1', pull5: 'pull1', pull6: 'pull1', tY: 'qYH', m7: 'qTR' };
 
   const DAYS = {
-    // Power first (fresh), then main ladders, Big 3 block, tendon block last.
-    A: { name: 'Push + Legs + Glutes + Big 3', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }, { ex: 'tCalf' }] },
-    B: { name: 'Pull + Legs + Glutes + Big 3', items: [{ lad: 'power' }, { lad: 'pull' }, { ex: 'subDoor' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }, { ex: 'tY' }] },
-    C: { name: 'Full Body + Mobility', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'pull' }, { ex: 'subDoor' }, { lad: 'legs' }, { ex: 'tHalf' }, { flow: true }] },
+    // Balanced full body (2026-11-26 fix): each day = 1 power move, push, pull, 1-2 leg/hip moves, core or upper-back accessory.
+    // Weekly working sets: push 15 (incl. Fast Press) · pull 15 (incl. Y Hold) · knee 9 · hip 6 · core: Big 3 ×2 · calf 3.
+    // Power alternates: Fast Squat on A (my ladder step), Fast Press on B + C (fixed, does not move the ladder).
+    A: { name: 'Full Body: Squat Focus + Big 3', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'pull' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }] },
+    B: { name: 'Full Body: Upper Focus + Big 3', items: [{ ex: 'pow1' }, { lad: 'pull' }, { lad: 'push' }, { lad: 'core' }, { big3: true }, { ex: 'tY' }] },
+    C: { name: 'Full Body + Mobility', items: [{ ex: 'pow1' }, { lad: 'push' }, { lad: 'pull' }, { lad: 'legs' }, { ex: 'tY' }, { ex: 'tCalf' }, { flow: true }] },
   };
 
 
@@ -2699,8 +2701,8 @@ td { color: var(--muted); }
       const ex = it.lad ? curEx(it.lad) : P.EX[it.ex];
       const d = D(ex.id);
       const sets = (d.sets || []).map((v) => (v === '' || v == null ? null : Number(v))).filter((v) => v != null && !isNaN(v));
-      if (d.skipped) { entries.push({ ex: ex.id, ladder: ex.ladder || null, step: ex.ladder ? ex.step : null, unit: ex.unit, sets: [], target: ex.reps, completed: false, note: d.note || '', pain: d.pain == null ? 0 : d.pain }); continue; }
-      const lad = it.swapped ? null : (ex.ladder || null); // a swapped-in move never moves the original ladder
+      const lad = it.swapped || (ex.ladder && curEx(ex.ladder).id !== ex.id) ? null : (ex.ladder || null); // swapped-in or fixed (off-step) moves never move a ladder
+      if (d.skipped) { entries.push({ ex: ex.id, ladder: lad, step: lad ? ex.step : null, unit: ex.unit, sets: [], target: ex.reps, completed: false, note: d.note || '', pain: d.pain == null ? 0 : d.pain }); continue; }
       if (!sets.length) {
         // no numbers, but a note / rating / pain was entered: save it anyway
         if ((d.note && d.note.trim()) || d.rating || d.pain != null) entries.push({ ex: ex.id, ladder: lad, step: lad ? ex.step : null, unit: ex.unit, sets: [], target: ex.reps, rating: d.rating || null, pain: d.pain == null ? 0 : d.pain, form: d.form !== false, note: d.note || '', completed: true, noNumbers: true });

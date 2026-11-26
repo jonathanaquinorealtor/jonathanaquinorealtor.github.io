@@ -194,10 +194,12 @@
   const PRONE_SWAP = { pull0: 'qYT', pull2: 'pull1', pull4: 'pull1', pull5: 'pull1', pull6: 'pull1', tY: 'qYH', m7: 'qTR' };
 
   const DAYS = {
-    // Power first (fresh), then main ladders, Big 3 block, tendon block last.
-    A: { name: 'Push + Legs + Glutes + Big 3', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }, { ex: 'tCalf' }] },
-    B: { name: 'Pull + Legs + Glutes + Big 3', items: [{ lad: 'power' }, { lad: 'pull' }, { ex: 'subDoor' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }, { ex: 'tY' }] },
-    C: { name: 'Full Body + Mobility', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'pull' }, { ex: 'subDoor' }, { lad: 'legs' }, { ex: 'tHalf' }, { flow: true }] },
+    // Balanced full body (2026-11-26 fix): each day = 1 power move, push, pull, 1-2 leg/hip moves, core or upper-back accessory.
+    // Weekly working sets: push 15 (incl. Fast Press) · pull 15 (incl. Y Hold) · knee 9 · hip 6 · core: Big 3 ×2 · calf 3.
+    // Power alternates: Fast Squat on A (my ladder step), Fast Press on B + C (fixed, does not move the ladder).
+    A: { name: 'Full Body: Squat Focus + Big 3', items: [{ lad: 'power' }, { lad: 'push' }, { lad: 'pull' }, { lad: 'legs' }, { lad: 'core' }, { big3: true }] },
+    B: { name: 'Full Body: Upper Focus + Big 3', items: [{ ex: 'pow1' }, { lad: 'pull' }, { lad: 'push' }, { lad: 'core' }, { big3: true }, { ex: 'tY' }] },
+    C: { name: 'Full Body + Mobility', items: [{ ex: 'pow1' }, { lad: 'push' }, { lad: 'pull' }, { lad: 'legs' }, { ex: 'tY' }, { ex: 'tCalf' }, { flow: true }] },
   };
 
 
